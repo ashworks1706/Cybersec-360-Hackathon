@@ -57,14 +57,14 @@ RUN chown -R phishguard:phishguard /app
 USER phishguard
 
 # Expose port
-EXPOSE 5000
+EXPOSE 5001
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:5000/api/health || exit 1
+    CMD curl -f http://localhost:5001/health || exit 1
 
 # Default command
-CMD ["python", "app.py"]
+CMD ["python", "demo_app.py"]
 
 # ============================================
 # Stage 4: Development Build (Optional)
@@ -87,7 +87,7 @@ RUN chown -R phishguard:phishguard /app
 USER phishguard
 
 # Expose port with debug mode
-EXPOSE 5000
+EXPOSE 5001
 
 # Development command with hot reload
-CMD ["python", "app.py", "--debug"]
+CMD ["python", "demo_app.py", "--debug"]

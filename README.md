@@ -411,3 +411,47 @@ docker-compose -f docker-compose.dev.yml up -d
 - 🔄 **Auto-scaling** ready configuration
 
 For detailed Docker documentation, see [DOCKER.md](DOCKER.md)
+
+## 🚀 Latest Advanced Features (NEW!)
+
+### 📚 RAG Database Document Management
+**Complete personal document storage system for enhanced threat detection:**
+- **Document Upload**: Drag-drop interface with multi-format support
+- **Content Deduplication**: Prevents redundant storage with hash-based checking
+- **Tag Organization**: Custom tagging system for easy document management
+- **Statistics Dashboard**: Real-time document usage and effectiveness metrics
+- **Document Viewer**: Modal-based document viewing with formatted display
+
+**Access**: `http://localhost:5001/documents.html`
+
+### 🧠 Layer 2 Model Fine-tuning
+**Intelligent DistilBERT model training system:**
+- **Training Readiness Validation**: Automatic requirement checking (100+ samples, 20+ per class)
+- **Data Quality Assurance**: Balance validation and quality control
+- **Real-time Progress Monitoring**: Live training logs with ETA calculation
+- **Graceful Degradation**: System works seamlessly without training features
+- **Model Persistence**: Automatic saving and versioning
+
+**Access**: `http://localhost:5001/training.html`
+
+### 🎯 Complete System Test
+```bash
+# Run comprehensive system test
+./test_system.sh
+
+# Test document management
+curl -X POST http://localhost:5001/api/user/test_user/documents \
+     -H 'Content-Type: application/json' \
+     -d '{"name":"Test Doc","content":"Sample content","type":"text","tags":["test"]}'
+
+# Check training readiness
+curl http://localhost:5001/api/model/training/status
+```
+
+### 🌟 Enhanced Demo Features
+- **Material Design UI**: Professional interface with responsive design
+- **Navigation Integration**: Seamless access from main dashboard
+- **Real-time Updates**: Live statistics and progress monitoring
+- **Error Handling**: Comprehensive error management with user feedback
+
+**🎯 Ready for production with complete AI-powered document management and model training capabilities!**

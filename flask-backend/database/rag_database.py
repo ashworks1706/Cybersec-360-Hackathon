@@ -123,6 +123,63 @@ class RAGDatabase:
                 )
             ''')
             
+            # User documents table for RAG enhancement
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS user_documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id TEXT,
+                    document_name TEXT,
+                    document_type TEXT,
+                    document_content TEXT,
+                    document_summary TEXT,
+                    document_hash TEXT UNIQUE,
+                    file_size INTEGER,
+                    upload_timestamp TEXT,
+                    last_accessed TEXT,
+                    access_count INTEGER DEFAULT 0,
+                    tags TEXT,
+                    is_active INTEGER DEFAULT 1,
+                    created_at TEXT
+                )
+            ''')
+            
+            # Model training data table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS model_training_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email_content TEXT,
+                    email_subject TEXT,
+                    email_sender TEXT,
+                    true_label TEXT,
+                    user_feedback TEXT,
+                    confidence_score REAL,
+                    scan_date TEXT,
+                    model_version TEXT,
+                    is_validated INTEGER DEFAULT 0,
+                    created_at TEXT
+                )
+            ''')
+            
+            # Model training sessions table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS model_training_sessions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT UNIQUE,
+                    model_type TEXT,
+                    training_samples_count INTEGER,
+                    validation_samples_count INTEGER,
+                    training_accuracy REAL,
+                    validation_accuracy REAL,
+                    training_duration REAL,
+                    model_size INTEGER,
+                    training_parameters TEXT,
+                    status TEXT,
+                    started_at TEXT,
+                    completed_at TEXT,
+                    created_at TEXT
+                )
+            ''')
+            
             conn.commit()
             conn.close()
             
@@ -680,3 +737,385 @@ class RAGDatabase:
         except Exception as e:
             logger.error(f"Failed to get database statistics: {e}")
             return {}
+    
+    # ============================================
+    # Document Management for RAG Enhancement
+    # ============================================
+    
+    def add_user_document(self, user_id: str, document_name: str, document_content: str, 
+                         document_type: str = 'text', tags: List[str] = None) -> Dict:
+        """
+        Add a document to user's RAG knowledge base
+        
+        Args:
+            user_id: User identifier
+            document_name: Name of the document
+            document_content: Full text content of the document
+            document_type: Type of document (text, pdf, email, etc.)
+            tags: Optional tags for categorization
+            
+        Returns:
+            Dict with document ID and status
+        """
+        try:
+            # Generate document hash for deduplication
+            document_hash = hashlib.sha256(document_content.encode()).hexdigest()
+            
+            # Generate summary (first 500 characters as basic summary)
+            document_summary = document_content[:500] + "..." if len(document_content) > 500 else document_content
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Check if document already exists
+            cursor.execute('SELECT id FROM user_documents WHERE document_hash = ?', (document_hash,))
+            existing = cursor.fetchone()
+            
+            if existing:
+                conn.close()
+                return {
+                    'status': 'duplicate',
+                    'message': 'Document already exists',
+                    'document_id': existing[0]
+                }
+            
+            # Insert new document
+            cursor.execute('''
+                INSERT INTO user_documents 
+                (user_id, document_name, document_type, document_content, document_summary, 
+                 document_hash, file_size, upload_timestamp, tags, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                user_id,
+                document_name,
+                document_type,
+                document_content,
+                document_summary,
+                document_hash,
+                len(document_content),
+                datetime.now().isoformat(),
+                json.dumps(tags) if tags else None,
+                datetime.now().isoformat()
+            ))
+            
+            document_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Document added for user {user_id}: {document_name}")
+            
+            return {
+                'status': 'success',
+                'message': 'Document added successfully',
+                'document_id': document_id,
+                'document_hash': document_hash
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to add document: {e}")
+            return {
+                'status': 'error',
+                'message': f'Failed to add document: {str(e)}'
+            }
+    
+    def get_user_documents(self, user_id: str, limit: int = 50) -> List[Dict]:
+        """Get all documents for a user"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                SELECT id, document_name, document_type, document_summary, file_size,
+                       upload_timestamp, tags, access_count
+                FROM user_documents 
+                WHERE user_id = ? AND is_active = 1
+                ORDER BY upload_timestamp DESC
+                LIMIT ?
+            ''', (user_id, limit))
+            
+            documents = []
+            for row in cursor.fetchall():
+                documents.append({
+                    'id': row[0],
+                    'name': row[1],
+                    'type': row[2],
+                    'summary': row[3],
+                    'size': row[4],
+                    'uploaded': row[5],
+                    'tags': json.loads(row[6]) if row[6] else [],
+                    'access_count': row[7]
+                })
+            
+            conn.close()
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Failed to get user documents: {e}")
+            return []
+    
+    def get_document_content(self, document_id: int, user_id: str) -> Dict:
+        """Get full document content and update access count"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Get document and verify ownership
+            cursor.execute('''
+                SELECT document_name, document_content, document_type, tags
+                FROM user_documents 
+                WHERE id = ? AND user_id = ? AND is_active = 1
+            ''', (document_id, user_id))
+            
+            result = cursor.fetchone()
+            if not result:
+                conn.close()
+                return {'status': 'error', 'message': 'Document not found'}
+            
+            # Update access count and timestamp
+            cursor.execute('''
+                UPDATE user_documents 
+                SET access_count = access_count + 1, last_accessed = ?
+                WHERE id = ?
+            ''', (datetime.now().isoformat(), document_id))
+            
+            conn.commit()
+            conn.close()
+            
+            return {
+                'status': 'success',
+                'name': result[0],
+                'content': result[1],
+                'type': result[2],
+                'tags': json.loads(result[3]) if result[3] else []
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get document content: {e}")
+            return {'status': 'error', 'message': str(e)}
+    
+    def delete_user_document(self, document_id: int, user_id: str) -> Dict:
+        """Soft delete a user document"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                UPDATE user_documents 
+                SET is_active = 0 
+                WHERE id = ? AND user_id = ?
+            ''', (document_id, user_id))
+            
+            if cursor.rowcount == 0:
+                conn.close()
+                return {'status': 'error', 'message': 'Document not found'}
+            
+            conn.commit()
+            conn.close()
+            
+            return {'status': 'success', 'message': 'Document deleted'}
+            
+        except Exception as e:
+            logger.error(f"Failed to delete document: {e}")
+            return {'status': 'error', 'message': str(e)}
+    
+    # ============================================
+    # Model Training Data Management
+    # ============================================
+    
+    def add_training_sample(self, email_content: str, email_subject: str, email_sender: str,
+                           true_label: str, user_feedback: str = None, confidence_score: float = None) -> Dict:
+        """Add a training sample from user feedback"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO model_training_data 
+                (email_content, email_subject, email_sender, true_label, user_feedback, 
+                 confidence_score, scan_date, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                email_content,
+                email_subject,
+                email_sender,
+                true_label,
+                user_feedback,
+                confidence_score,
+                datetime.now().isoformat(),
+                datetime.now().isoformat()
+            ))
+            
+            training_id = cursor.lastrowid
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Training sample added: {true_label}")
+            return {'status': 'success', 'training_id': training_id}
+            
+        except Exception as e:
+            logger.error(f"Failed to add training sample: {e}")
+            return {'status': 'error', 'message': str(e)}
+    
+    def get_training_data_stats(self) -> Dict:
+        """Get statistics about available training data"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            stats = {}
+            
+            # Total samples
+            cursor.execute('SELECT COUNT(*) FROM model_training_data')
+            stats['total_samples'] = cursor.fetchone()[0]
+            
+            # Samples by label
+            cursor.execute('''
+                SELECT true_label, COUNT(*) 
+                FROM model_training_data 
+                GROUP BY true_label
+            ''')
+            stats['samples_by_label'] = dict(cursor.fetchall())
+            
+            # Validated samples
+            cursor.execute('SELECT COUNT(*) FROM model_training_data WHERE is_validated = 1')
+            stats['validated_samples'] = cursor.fetchone()[0]
+            
+            # Recent samples (last 30 days)
+            thirty_days_ago = (datetime.now() - timedelta(days=30)).isoformat()
+            cursor.execute('SELECT COUNT(*) FROM model_training_data WHERE created_at > ?', (thirty_days_ago,))
+            stats['recent_samples'] = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            # Determine if enough data for training
+            stats['ready_for_training'] = (
+                stats['total_samples'] >= 100 and  # Minimum 100 samples
+                len(stats['samples_by_label']) >= 2 and  # At least 2 classes
+                all(count >= 20 for count in stats['samples_by_label'].values())  # Min 20 per class
+            )
+            
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get training data stats: {e}")
+            return {'ready_for_training': False, 'error': str(e)}
+    
+    def create_training_session(self, model_type: str, training_samples_count: int) -> str:
+        """Create a new model training session"""
+        try:
+            session_id = f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO model_training_sessions 
+                (session_id, model_type, training_samples_count, status, started_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                session_id,
+                model_type,
+                training_samples_count,
+                'started',
+                datetime.now().isoformat(),
+                datetime.now().isoformat()
+            ))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"Training session created: {session_id}")
+            return session_id
+            
+        except Exception as e:
+            logger.error(f"Failed to create training session: {e}")
+            return None
+    
+    def update_training_session(self, session_id: str, **kwargs) -> bool:
+        """Update training session with results"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Build dynamic update query
+            update_fields = []
+            values = []
+            
+            for key, value in kwargs.items():
+                if key in ['validation_samples_count', 'training_accuracy', 'validation_accuracy',
+                          'training_duration', 'model_size', 'training_parameters', 'status',
+                          'completed_at']:
+                    update_fields.append(f"{key} = ?")
+                    values.append(value)
+            
+            if not update_fields:
+                return False
+            
+            values.append(session_id)
+            query = f"UPDATE model_training_sessions SET {', '.join(update_fields)} WHERE session_id = ?"
+            
+            cursor.execute(query, values)
+            conn.commit()
+            conn.close()
+            
+            return cursor.rowcount > 0
+            
+        except Exception as e:
+            logger.error(f"Failed to update training session: {e}")
+            return False
+    
+    def health_check(self):
+        """
+        Perform health check on the RAG database system.
+        
+        Returns:
+            Dict with health status and statistics
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Check if database is accessible
+            cursor.execute("SELECT 1")
+            
+            # Get basic statistics
+            stats = {}
+            
+            # Count total experiences
+            cursor.execute("SELECT COUNT(*) FROM user_experiences")
+            stats['total_experiences'] = cursor.fetchone()[0]
+            
+            # Count unique users
+            cursor.execute("SELECT COUNT(DISTINCT user_id) FROM user_experiences")
+            stats['unique_users'] = cursor.fetchone()[0]
+            
+            # Count user documents
+            cursor.execute("SELECT COUNT(*) FROM user_documents")
+            stats['total_documents'] = cursor.fetchone()[0]
+            
+            # Count training sessions
+            cursor.execute("SELECT COUNT(*) FROM model_training_sessions")
+            stats['training_sessions'] = cursor.fetchone()[0]
+            
+            # Check for recent activity (last 24 hours)
+            recent_cutoff = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+            cursor.execute("SELECT COUNT(*) FROM user_experiences WHERE timestamp > ?", (recent_cutoff,))
+            stats['recent_activity'] = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            return {
+                'status': 'healthy',
+                'database_accessible': True,
+                'statistics': stats,
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+        except Exception as e:
+            logger.error(f"RAG database health check failed: {e}")
+            return {
+                'status': 'unhealthy',
+                'database_accessible': False,
+                'error': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            }
