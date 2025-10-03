@@ -179,6 +179,7 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
                 'personal_context': final_assessment.get('personal_relevance', 'none'),
                 'detailed_analysis': final_assessment.get('analysis', ''),
                 'recommended_action': final_assessment.get('recommendation', ''),
+                'risk_score': final_assessment.get('total_score', 0),  # Comprehensive risk score from all Layer 3 analyses
                 'processing_time': (datetime.utcnow() - start_time).total_seconds()
             }
             

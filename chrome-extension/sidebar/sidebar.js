@@ -594,10 +594,54 @@ class PhishGuardSidebar {
             this.statusMessage.textContent = 'Potential phishing attempt detected';
         }
 
+        // Calculate and display comprehensive risk score from all layers
+        console.log('🔍 [DEBUG] Calculating comprehensive risk score...');
+        let riskScore = 0;
+
+        // Priority 1: Use Layer 3's comprehensive risk_score if available
+        if (scanData.layers?.layer3?.risk_score !== undefined) {
+            riskScore = scanData.layers.layer3.risk_score;
+            console.log('🔍 [DEBUG] Using Layer 3 risk_score:', riskScore);
+        }
+        // Priority 2: Calculate from confidence and Layer 3 SE score
+        else if (scanData.layers?.layer3?.social_engineering_score !== undefined) {
+            const seScore = scanData.layers.layer3.social_engineering_score;
+            const confidenceScore = (scanData.confidence_score || 0) * 100;
+            riskScore = Math.min(Math.round((confidenceScore + seScore) / 2), 100);
+            console.log('🔍 [DEBUG] Calculated risk_score from SE + confidence:', riskScore);
+        }
+        // Priority 3: Use confidence score alone
+        else {
+            riskScore = Math.round((scanData.confidence_score || 0) * 100);
+            console.log('🔍 [DEBUG] Using confidence_score as risk:', riskScore);
+        }
+
+        // Update risk score display
+        this.scoreValue.textContent = riskScore;
+
+        // Color code the risk score circle based on threat level
+        if (riskScore >= 80) {
+            // Critical threat - Red
+            this.scoreCircle.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
+            console.log('🔴 [DEBUG] Risk level: CRITICAL (80-100)');
+        } else if (riskScore >= 60) {
+            // High risk - Orange/Red
+            this.scoreCircle.style.background = 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)';
+            console.log('🟠 [DEBUG] Risk level: HIGH (60-79)');
+        } else if (riskScore >= 40) {
+            // Medium risk - Yellow/Orange
+            this.scoreCircle.style.background = 'linear-gradient(135deg, #facc15 0%, #f97316 100%)';
+            console.log('🟡 [DEBUG] Risk level: MEDIUM (40-59)');
+        } else {
+            // Low risk - Green/Blue
+            this.scoreCircle.style.background = 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)';
+            console.log('🟢 [DEBUG] Risk level: LOW (0-39)');
+        }
+
         this.actionButtons.style.display = 'flex';
         this.scanTime.textContent = new Date().toLocaleTimeString();
 
-        console.log('✅ [DEBUG] Final verdict displayed, all animations stopped');
+        console.log('✅ [DEBUG] Final verdict displayed with risk score:', riskScore);
     }
     
     toggleLayerDetails(layerId) {
