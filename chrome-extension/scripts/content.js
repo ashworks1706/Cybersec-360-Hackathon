@@ -1,17 +1,23 @@
 // PhishGuard 360 - Content Script for Gmail Integration
 // Detects Gmail interface and injects security scanning functionality
 
-class PhishGuardScanner {
-    constructor() {
-        this.isGmailPage = this.detectGmailInterface();
-        this.sidebarInjected = false;
-        this.currentEmailData = null;
-        this.scanInProgress = false;
-        
-        if (this.isGmailPage) {
-            this.initializeScanner();
+// Prevent multiple initializations
+if (window.phishGuardInitialized) {
+    console.log('PhishGuard already initialized, skipping...');
+} else {
+    window.phishGuardInitialized = true;
+
+    class PhishGuardScanner {
+        constructor() {
+            this.isGmailPage = this.detectGmailInterface();
+            this.sidebarInjected = false;
+            this.currentEmailData = null;
+            this.scanInProgress = false;
+            
+            if (this.isGmailPage) {
+                this.initializeScanner();
+            }
         }
-    }
     
     detectGmailInterface() {
         const url = window.location.href;
@@ -28,12 +34,80 @@ class PhishGuardScanner {
     initializeScanner() {
         console.log('🛡️ PhishGuard 360 initialized on Gmail');
         
+        // Setup message listener for popup communication
+        this.setupMessageListener();
+        
         // Wait for Gmail to fully load
         this.waitForGmailLoad().then(() => {
             this.setupEmailObserver();
             this.setupKeyboardShortcuts();
             this.checkAndInjectScanButton(); // Only inject when viewing an email
         });
+    }
+    
+    setupMessageListener() {
+        // Remove any existing listeners to prevent duplicates
+        if (chrome.runtime.onMessage.hasListeners()) {
+            console.log('PhishGuard: Removing existing message listeners');
+        }
+        
+        // Listen for messages from popup and other extension components
+        chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+            console.log('PhishGuard: Received message:', message);
+            
+            // Always respond, even if just to acknowledge receipt
+            try {
+                switch (message.type) {
+                    case 'TRIGGER_SCAN':
+                        this.handleTriggerScan().then(result => {
+                            sendResponse({ success: true, result });
+                        }).catch(error => {
+                            console.error('Scan trigger failed:', error);
+                            sendResponse({ success: false, error: error.message });
+                        });
+                        return true; // Will respond asynchronously
+                        
+                case 'CHECK_EMAIL_STATUS':
+                    const status = { 
+                        hasEmail: this.isViewingSpecificEmail(),
+                        canScan: this.isViewingSpecificEmail() && !this.scanInProgress,
+                        url: window.location.href,
+                        debugInfo: this.getEmailDetectionDebugInfo()
+                    };
+                    sendResponse(status);
+                    break;                    case 'GET_CURRENT_EMAIL':
+                        const emailData = this.extractCurrentEmailData();
+                        sendResponse({ emailData });
+                        break;
+                        
+                    case 'PING':
+                        sendResponse({ pong: true, timestamp: Date.now() });
+                        break;
+                        
+                    default:
+                        sendResponse({ success: false, error: 'Unknown message type: ' + message.type });
+                }
+            } catch (error) {
+                console.error('Message handler error:', error);
+                sendResponse({ success: false, error: error.message });
+            }
+        });
+        
+        console.log('PhishGuard: Message listener setup complete');
+    }
+    
+    async handleTriggerScan() {
+        if (!this.isViewingSpecificEmail()) {
+            throw new Error('No email is currently open for scanning');
+        }
+        
+        if (this.scanInProgress) {
+            throw new Error('Scan already in progress');
+        }
+        
+        // Start the email scan
+        await this.startEmailScan();
+        return { message: 'Scan started successfully' };
     }
     
     async waitForGmailLoad() {
@@ -62,34 +136,102 @@ class PhishGuardScanner {
     isViewingSpecificEmail() {
         // Check if we're viewing a specific email thread (not inbox, compose, etc.)
         const url = window.location.href;
+        console.log('PhishGuard: Checking email view for URL:', url);
         
-        // Gmail email view URL patterns
+        // Improved Gmail email view URL patterns
         const emailViewPatterns = [
             /\/mail\/u\/\d+\/#inbox\/[a-zA-Z0-9]+/, // #inbox/threadid
             /\/mail\/u\/\d+\/#sent\/[a-zA-Z0-9]+/,  // #sent/threadid
             /\/mail\/u\/\d+\/#starred\/[a-zA-Z0-9]+/, // #starred/threadid
             /\/mail\/u\/\d+\/#label\/[^\/]+\/[a-zA-Z0-9]+/, // #label/name/threadid
-            /\/mail\/.*#.*\/[a-zA-Z0-9]{16}/ // General pattern for thread IDs
+            /\/mail\/.*#.*\/[a-zA-Z0-9]{16}/, // General pattern for 16-char thread IDs
+            /\/mail\/.*#.*\/[a-zA-Z0-9]{15,}/, // General pattern for long thread IDs
+            /#inbox\/[a-zA-Z0-9]{15,}/, // Simplified inbox pattern
+            /#sent\/[a-zA-Z0-9]{15,}/, // Simplified sent pattern
+            /#starred\/[a-zA-Z0-9]{15,}/, // Simplified starred pattern
         ];
         
         // Check URL patterns
-        const isEmailURL = emailViewPatterns.some(pattern => pattern.test(url));
+        const isEmailURL = emailViewPatterns.some(pattern => {
+            const match = pattern.test(url);
+            if (match) console.log('PhishGuard: URL pattern matched:', pattern);
+            return match;
+        });
         
-        // Check DOM indicators for email view
-        const hasEmailContent = document.querySelector('.ii.gt') || // Email body content
-                               document.querySelector('[data-thread-perm-id]') || // Thread container
-                               document.querySelector('.adn.ads'); // Email header area
+        // Enhanced DOM indicators for email view
+        const emailContentSelectors = [
+            '.ii.gt', // Email body content
+            '[data-thread-perm-id]', // Thread container
+            '.adn.ads', // Email header area
+            '.h7', // Email container
+            '.adf.ads', // Email header toolbar
+            '.gs', // Email subject
+            '.hP', // Subject header
+            '.bog', // Subject text
+        ];
+        
+        const hasEmailContent = emailContentSelectors.some(selector => {
+            const element = document.querySelector(selector);
+            if (element) console.log('PhishGuard: Found email content element:', selector);
+            return element;
+        });
+        
+        // Check for email-specific elements that indicate we're viewing an email
+        const hasEmailHeader = document.querySelector('.gH') || // Email header
+                              document.querySelector('.go') || // Sender info
+                              document.querySelector('.gD'); // Sender details
         
         // Make sure we're not in compose mode
         const isComposing = document.querySelector('.M9') || // Compose window
                            document.querySelector('[role="dialog"]') || // Compose dialog
-                           url.includes('#compose');
+                           url.includes('#compose') ||
+                           url.includes('&compose=');
         
-        // Make sure we're not in inbox list view
-        const isInboxList = document.querySelector('.ae4.UI') && // Inbox list container
-                           !document.querySelector('.ii.gt'); // No email body content
+        // Make sure we're not in inbox list view (has conversation list but no email body)
+        const isInboxList = (document.querySelector('.ae4.UI') || document.querySelector('.Cp')) && // Inbox list container
+                           !document.querySelector('.ii.gt') && // No email body content
+                           !hasEmailHeader; // No email header
         
-        return (isEmailURL || hasEmailContent) && !isComposing && !isInboxList;
+        // Additional check: look for email thread indicators
+        const hasThreadIndicators = document.querySelector('[data-thread-perm-id]') ||
+                                   document.querySelector('.nH .hx') || // Thread header
+                                   (document.querySelector('.hP') && document.querySelector('.gD')); // Subject + sender
+        
+        const result = ((isEmailURL || hasEmailContent || hasEmailHeader || hasThreadIndicators) && 
+                       !isComposing && !isInboxList);
+        
+        console.log('PhishGuard: Email detection result:', {
+            url,
+            isEmailURL,
+            hasEmailContent,
+            hasEmailHeader,
+            hasThreadIndicators,
+            isComposing,
+            isInboxList,
+            finalResult: result
+        });
+        
+        return result;
+    }
+    
+    getEmailDetectionDebugInfo() {
+        const url = window.location.href;
+        return {
+            url,
+            hasEmailBody: !!document.querySelector('.ii.gt'),
+            hasThreadContainer: !!document.querySelector('[data-thread-perm-id]'),
+            hasEmailHeader: !!document.querySelector('.gH'),
+            hasSenderInfo: !!document.querySelector('.gD'),
+            hasSubject: !!document.querySelector('.hP'),
+            isComposing: !!(document.querySelector('.M9') || url.includes('#compose')),
+            hasInboxList: !!document.querySelector('.ae4.UI'),
+            allEmailElements: this.getAllEmailElements()
+        };
+    }
+    
+    getAllEmailElements() {
+        const selectors = ['.ii.gt', '[data-thread-perm-id]', '.adn.ads', '.h7', '.adf.ads', '.gs', '.hP', '.bog', '.gH', '.go', '.gD'];
+        return selectors.filter(selector => document.querySelector(selector));
     }
     
     injectScanButton() {
@@ -449,18 +591,30 @@ class PhishGuardScanner {
     }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        new PhishGuardScanner();
-    });
-} else {
-    new PhishGuardScanner();
-}
+    // Store global instance
+    let phishGuardInstance = null;
 
-// Handle dynamic Gmail navigation
-window.addEventListener('popstate', () => {
-    setTimeout(() => {
-        new PhishGuardScanner();
-    }, 1000);
-});
+    // Initialize when DOM is ready
+    function initializePhishGuard() {
+        if (!phishGuardInstance) {
+            phishGuardInstance = new PhishGuardScanner();
+            window.phishGuardScanner = phishGuardInstance; // Global access for debugging
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializePhishGuard);
+    } else {
+        initializePhishGuard();
+    }
+
+    // Handle dynamic Gmail navigation
+    window.addEventListener('popstate', () => {
+        setTimeout(() => {
+            if (phishGuardInstance) {
+                phishGuardInstance.checkAndInjectScanButton();
+            }
+        }, 1000);
+    });
+
+} // End of initialization guard

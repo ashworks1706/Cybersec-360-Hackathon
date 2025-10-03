@@ -197,19 +197,101 @@ class PhishGuardPopup {
                 return;
             }
             
-            // Send message to content script to start scan
-            await chrome.tabs.sendMessage(currentTab.id, {
-                type: 'TRIGGER_SCAN',
-                source: 'popup'
-            });
+            // First ping the content script to see if it's responsive
+            try {
+                const pingResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
+                console.log('Content script ping successful:', pingResponse);
+            } catch (pingError) {
+                console.warn('Content script not responding, attempting injection...');
+                
+                try {
+                    // Inject content script if it's not already there
+                    await chrome.scripting.executeScript({
+                        target: { tabId: currentTab.id },
+                        files: ['scripts/content.js']
+                    });
+                    
+                    // Inject CSS as well
+                    await chrome.scripting.insertCSS({
+                        target: { tabId: currentTab.id },
+                        files: ['styles/content.css']
+                    });
+                    
+                    // Wait a moment for initialization
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    
+                    // Try ping again
+                    await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
+                    
+                } catch (injectionError) {
+                    console.error('Failed to inject content script:', injectionError);
+                    this.showNotification('Please refresh Gmail and try again', 'error');
+                    return;
+                }
+            }
             
-            // Close popup to show sidebar
-            window.close();
+            // Check if we can scan
+            try {
+                const statusResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'CHECK_EMAIL_STATUS' }, 3000);
+                
+                console.log('PhishGuard: Email status response:', statusResponse);
+                
+                if (!statusResponse.hasEmail) {
+                    console.log('PhishGuard: Debug info:', statusResponse.debugInfo);
+                    this.showNotification('Please open an individual email to scan', 'warning');
+                    return;
+                }
+                
+                if (!statusResponse.canScan) {
+                    this.showNotification('Scan already in progress', 'warning');
+                    return;
+                }
+                
+            } catch (statusError) {
+                console.error('Failed to check email status:', statusError);
+                this.showNotification('Could not communicate with Gmail page', 'error');
+                return;
+            }
+            
+            // Send message to content script to start scan
+            try {
+                const scanResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'TRIGGER_SCAN', source: 'popup' }, 5000);
+                
+                if (scanResponse && scanResponse.success) {
+                    this.showNotification('Email scan started!', 'success');
+                    // Close popup to show sidebar
+                    setTimeout(() => window.close(), 500);
+                } else {
+                    this.showNotification(scanResponse?.error || 'Failed to start scan', 'error');
+                }
+            } catch (scanError) {
+                console.error('Scan request failed:', scanError);
+                this.showNotification('Failed to start scan: ' + scanError.message, 'error');
+            }
             
         } catch (error) {
             console.error('Failed to trigger scan:', error);
-            this.showNotification('Failed to start scan. Please refresh Gmail and try again.', 'error');
+            this.showNotification('An unexpected error occurred', 'error');
         }
+    }
+    
+    // Helper method to send messages with timeout
+    sendMessageWithTimeout(tabId, message, timeoutMs = 5000) {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+                reject(new Error('Message timeout'));
+            }, timeoutMs);
+            
+            chrome.tabs.sendMessage(tabId, message, (response) => {
+                clearTimeout(timeout);
+                
+                if (chrome.runtime.lastError) {
+                    reject(new Error(chrome.runtime.lastError.message));
+                } else {
+                    resolve(response);
+                }
+            });
+        });
     }
     
     async updateSetting(key, value) {

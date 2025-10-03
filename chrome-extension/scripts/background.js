@@ -71,9 +71,17 @@ class PhishGuardBackground {
         if (details.reason === 'install') {
             // First-time installation
             this.showWelcomeNotification();
-            chrome.tabs.create({
-                url: chrome.runtime.getURL('popup/welcome.html')
-            });
+            
+            // Optional: Open welcome page if it exists
+            try {
+                chrome.tabs.create({
+                    url: chrome.runtime.getURL('popup/welcome.html')
+                }).catch(error => {
+                    console.log('Welcome page not available:', error.message);
+                });
+            } catch (error) {
+                console.log('Could not open welcome page:', error.message);
+            }
         } else if (details.reason === 'update') {
             // Extension update
             console.log('PhishGuard updated to version:', chrome.runtime.getManifest().version);
@@ -273,12 +281,19 @@ class PhishGuardBackground {
     }
     
     showWelcomeNotification() {
-        chrome.notifications.create({
-            type: 'basic',
-            iconUrl: 'assets/icon48.png',
-            title: 'PhishGuard 360 Installed!',
-            message: 'Your email security is now enhanced. Navigate to Gmail to start scanning.'
-        });
+        // Check if notifications API is available
+        if (chrome.notifications && chrome.notifications.create) {
+            chrome.notifications.create({
+                type: 'basic',
+                iconUrl: 'assets/icon48.png',
+                title: 'PhishGuard 360 Installed!',
+                message: 'Your email security is now enhanced. Navigate to Gmail to start scanning.'
+            }).catch(error => {
+                console.warn('Failed to show welcome notification:', error);
+            });
+        } else {
+            console.log('PhishGuard 360 installed successfully! Notifications not available.');
+        }
     }
 }
 
