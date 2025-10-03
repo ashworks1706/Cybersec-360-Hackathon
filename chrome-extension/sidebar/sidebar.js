@@ -68,18 +68,21 @@ class PhishGuardSidebar {
             });
         }
 
-        // Layer card clicks for expanding details
-        document.getElementById('layer1').addEventListener('click', () => {
-            this.toggleLayerDetails('layer1');
+        // Layer header clicks for expanding details (using data attributes)
+        document.querySelectorAll('.layer-header[data-layer]').forEach(header => {
+            header.addEventListener('click', () => {
+                const layerId = header.getAttribute('data-layer');
+                this.toggleLayerDetails(layerId);
+            });
         });
 
-        document.getElementById('layer2').addEventListener('click', () => {
-            this.toggleLayerDetails('layer2');
-        });
-
-        document.getElementById('layer3').addEventListener('click', () => {
-            this.toggleLayerDetails('layer3');
-        });
+        // Verdict header click
+        const verdictHeader = document.getElementById('verdictHeader');
+        if (verdictHeader) {
+            verdictHeader.addEventListener('click', () => {
+                this.toggleVerdictDetails();
+            });
+        }
 
         // Action button clicks
         this.markSafeBtn.addEventListener('click', () => {

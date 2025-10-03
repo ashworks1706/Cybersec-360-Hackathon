@@ -141,6 +141,144 @@ Cybersec-360-hackathon/
     └── se_phishing_test_set.csv
 ```
 
+┌─────────────────────────────────────────────────────────────┐
+│                    PHISHGUARD 360 BACKEND                   │
+│                     Flask Application                       │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+         📧 Email Input (from Chrome Extension)
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  EMAIL PROCESSOR                           │
+│  • Normalizes email data (from/sender field mapping)       │
+│  • Extracts URLs, emails, phone numbers                    │
+│  • Cleans HTML, handles encoding                           │
+│  • Formats text for analysis                               │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+┌─────────────────────────────────────────────────────────────┐
+│                     LAYER 1                                │
+│              Database Pattern Matcher                      │
+│  🏁 FIRST LINE OF DEFENSE - FASTEST RESPONSE               │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+         ⚡ Decision Point 1
+         ┌─────────────────┐
+         │   THREAT FOUND? │
+         └─────┬─────┬─────┘
+               │     │
+            ✅ YES   ❌ NO
+               │     │
+               ▼     ▼
+          🚨 STOP    Continue to Layer 2
+          THREAT     
+          ALERT      
+               
+┌─────────────────────────────────────────────────────────────┐
+│                     LAYER 2                                │
+│               AI Model Classifier                          │
+│  🤖 MACHINE LEARNING - DISTILBERT MODEL                    │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+         ⚡ Decision Point 2
+         ┌─────────────────┐
+         │ HIGH CONFIDENCE │
+         │    BENIGN?      │
+         └─────┬─────┬─────┘
+               │     │
+            ✅ YES   ❌ NO
+               │     │
+               ▼     ▼
+          ✅ SAFE    Continue to Layer 3
+          CLEAR      
+               
+┌─────────────────────────────────────────────────────────────┐
+│                     LAYER 3                                │
+│              Detective Agent (LLM)                         │
+│  🕵️ ADVANCED ANALYSIS - GEMINI + RAG DATABASE              │
+└─────────────────┬───────────────────────────────────────────┘
+                  │
+                  ▼
+         🎯 FINAL VERDICT
+
+
+📊 Layer-by-Layer Breakdown
+🔍 Layer 1: Database Pattern Matcher
+Purpose: Fast, rule-based detection of known threats Technology: SQLite cache + Pattern matching
+
+What it does:
+`# Key Components:
+• Known spam patterns (SSN requests, urgency indicators)
+• Sender reputation checking  
+• URL analysis (shorteners, suspicious domains)
+• Government impersonation detection
+• Financial information request patterns
+
+`# Example patterns:
+- SSN/Social Security Number requests
+- IRS/Medicare impersonation
+- Urgent + personal info combinations
+- Account suspension threats
+Decision Logic:
+
+✅ CLEAN → Continue to Layer 2
+🚨 THREAT → STOP - Block immediately with high confidence (95%)
+Performance: ~1-3ms response time with caching
+
+🤖 Layer 2: AI Model Classifier
+Purpose: Machine learning-based email classification Technology: DistilBERT transformer model + Manual overrides
+
+What it does:
+`# Model: cybersectony/phishing-email-detection-distilbert_v2.1
+• Text preprocessing and tokenization
+• Neural network classification (benign vs malicious)
+• Manual override system for critical patterns
+• Confidence scoring and threshold management
+
+`# Manual Override Patterns:
+- SSN requests that bypass model
+- Government agency impersonation  
+- Critical financial information requests
+
+Decision Logic:
+
+✅ High Confidence Benign (>80%) → SAFE - Stop here
+🟡 Suspicious/Low Confidence → Continue to Layer 3
+🚨 Manual Override Triggered → THREAT - Stop here
+Performance: ~100-500ms depending on model complexity
+
+🕵️ Layer 3: Detective Agent (LLM)
+Purpose: Advanced social engineering and context analysis
+Technology: Google Gemini LLM + RAG Database
+
+What it does:
+`# Advanced Analysis:
+• Social engineering pattern detection
+• User context integration (via RAG database)
+• Conversation flow analysis
+• Cultural and psychological manipulation detection
+• Personalized threat assessment
+
+`# RAG Database includes:
+- User interaction history
+- Previous scan results  
+- Threat intelligence data
+- User vulnerability profiles
+
+Decision Logic:
+
+Analyzes email in context of user history
+Detects sophisticated social engineering
+Provides final verdict with detailed reasoning
+Returns confidence score and threat level
+Performance: ~1-3 seconds (LLM processing time)
+
+
+
 ## 🏆 Competition Highlights
 
 - **Real-world Application**: Actually deployable Chrome extension
