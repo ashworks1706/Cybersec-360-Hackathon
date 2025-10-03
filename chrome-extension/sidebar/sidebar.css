@@ -256,6 +256,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-sm);
+    padding: 0 var(--spacing-md);
 }
 
 .scan-step {
@@ -333,6 +334,8 @@ body {
 
 .step-icon .material-icons {
     font-size: 18px;
+    display: block;
+    line-height: 1;
 }
 
 .step-content {
