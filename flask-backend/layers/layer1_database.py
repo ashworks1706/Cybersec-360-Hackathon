@@ -71,26 +71,66 @@ class Layer1DatabaseChecker:
         self.spam_patterns = {
             'sender_domains': [
                 'suspicious-bank.com',
-                'phishing-test.com',
+                'phishing-test.com', 
                 'fake-amazon.net',
-                'secure-paypal.org'
+                'secure-paypal.org',
+                'gmail.com',  # Suspicious when claiming to be official services
+                'yahoo.com',  # Suspicious when claiming to be official services
+                'outlook.com'  # Suspicious when claiming to be official services
             ],
             'subject_patterns': [
-                'urgent.*verify.*account',
-                'click.*here.*immediately',
-                'suspended.*account',
-                'confirm.*identity.*now',
-                'limited.*time.*offer'
+                r'urgent.*verify.*account',
+                r'click.*here.*immediately', 
+                r'suspended.*account',
+                r'confirm.*identity.*now',
+                r'limited.*time.*offer',
+                r'ssn.*number.*needed',
+                r'social.*security.*number',
+                r'verify.*ssn',
+                r'last.*four.*digits',
+                r'personal.*information.*missing',
+                r'crucial.*details.*missing',
+                r'checkup.*scheduled',
+                r'appointment.*reminder'
             ],
             'body_patterns': [
-                'click.*link.*verify',
-                'account.*suspended.*verify',
-                'urgent.*action.*required',
-                'confirm.*payment.*information'
+                r'click.*link.*verify',
+                r'account.*suspended.*verify',
+                r'urgent.*action.*required',
+                r'confirm.*payment.*information',
+                r'ssn.*number',
+                r'social.*security.*number',
+                r'last.*four.*digits.*ssn',
+                r'share.*it.*urgently',
+                r'asap.*urgent',
+                r'personal.*information.*missing',
+                r'crucial.*details.*about.*your',
+                r'we.*found.*that.*we.*are.*missing',
+                r'public.*health.*services',
+                r'checkup.*scheduled.*on.*monday',
+                r'need.*last.*four.*digits',
+                r'please.*share.*it.*urgently'
+            ],
+            'suspicious_phrases': [
+                'share it urgently asap',
+                'last four digits of your ssn',
+                'missing crucial details',
+                'personal information',
+                'public health services',
+                'urgently asap',
+                'share it urgently'
+            ],
+            'financial_requests': [
+                'ssn', 'social security', 'bank account', 'credit card',
+                'routing number', 'account number', 'pin number'
+            ],
+            'urgency_indicators': [
+                'urgent', 'immediately', 'asap', 'right away', 'at earliest',
+                'time sensitive', 'expires soon', 'act now'
             ],
             'suspicious_urls': [
                 'bit.ly',
-                'tinyurl.com',
+                'tinyurl.com', 
                 'short.link'
             ]
         }
@@ -240,22 +280,76 @@ class Layer1DatabaseChecker:
             logger.error(f"Cache storage failed: {e}")
     
     def check_spam_patterns(self, email_data: Dict) -> Dict:
-        """Check against known spam patterns"""
+        """Check against known spam patterns with enhanced detection"""
         indicators = []
         confidence = 0.0
         
         sender = email_data.get('sender', '').lower()
         subject = email_data.get('subject', '').lower()
         body = email_data.get('body', '').lower()
+        full_content = f"{subject} {body}".lower()
         
-        # Check sender domain
+        import re
+        
+        # Check for financial information requests (HIGH PRIORITY)
+        for financial_term in self.spam_patterns['financial_requests']:
+            if financial_term.lower() in full_content:
+                indicators.append(f"Requesting sensitive financial info: {financial_term}")
+                confidence = max(confidence, 0.95)
+        
+        # Check for urgency indicators combined with requests
+        urgency_count = 0
+        for urgency_term in self.spam_patterns['urgency_indicators']:
+            if urgency_term.lower() in full_content:
+                urgency_count += 1
+        
+        if urgency_count >= 2:  # Multiple urgency indicators
+            indicators.append(f"Multiple urgency indicators detected: {urgency_count}")
+            confidence = max(confidence, 0.8)
+        
+        # Check suspicious phrases (exact matches)
+        for phrase in self.spam_patterns['suspicious_phrases']:
+            if phrase.lower() in full_content:
+                indicators.append(f"Suspicious phrase detected: {phrase}")
+                confidence = max(confidence, 0.9)
+        
+        # Check sender domain vs content mismatch
+        if 'health services' in full_content or 'public health' in full_content:
+            # Check if sender is actually from a health organization
+            health_domains = ['.gov', '.edu', 'health.org', 'medical.org']
+            is_legitimate_health = any(domain in sender for domain in health_domains)
+            
+            if not is_legitimate_health:
+                indicators.append("Impersonating health services from non-official domain")
+                confidence = max(confidence, 0.85)
+        
+        # Check for SSN-specific patterns
+        ssn_patterns = [
+            r'ssn.*number',
+            r'social.*security.*number', 
+            r'last.*four.*digits.*ssn',
+            r'last.*four.*digits.*of.*your.*ssn'
+        ]
+        
+        for pattern in ssn_patterns:
+            if re.search(pattern, full_content, re.IGNORECASE):
+                indicators.append(f"SSN request detected: {pattern}")
+                confidence = max(confidence, 0.95)
+        
+        # Check sender domain patterns
         for domain in self.spam_patterns['sender_domains']:
             if domain in sender:
                 indicators.append(f"Suspicious sender domain: {domain}")
                 confidence = max(confidence, 0.9)
         
+        # Enhanced generic sender check (gmail claiming to be official)
+        if ('gmail.com' in sender or 'yahoo.com' in sender or 'outlook.com' in sender):
+            official_claims = ['health services', 'government', 'bank', 'official', 'department']
+            if any(claim in full_content for claim in official_claims):
+                indicators.append("Free email service claiming to be official organization")
+                confidence = max(confidence, 0.8)
+        
         # Check subject patterns
-        import re
         for pattern in self.spam_patterns['subject_patterns']:
             if re.search(pattern, subject, re.IGNORECASE):
                 indicators.append(f"Suspicious subject pattern: {pattern}")
@@ -264,8 +358,14 @@ class Layer1DatabaseChecker:
         # Check body patterns
         for pattern in self.spam_patterns['body_patterns']:
             if re.search(pattern, body, re.IGNORECASE):
+                logger.debug(f"Pattern '{pattern}' matched in body: '{body[:100]}...'")
                 indicators.append(f"Suspicious body pattern: {pattern}")
                 confidence = max(confidence, 0.7)
+        
+        # Check for combination patterns (more dangerous)
+        if ('urgent' in full_content and 'personal information' in full_content):
+            indicators.append("Urgent personal information request - classic phishing")
+            confidence = max(confidence, 0.9)
         
         return {
             'is_suspicious': len(indicators) > 0,

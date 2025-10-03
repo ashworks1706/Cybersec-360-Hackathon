@@ -3,6 +3,7 @@
 
 import torch
 import logging
+import re
 from typing import Dict, List, Optional
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -97,7 +98,7 @@ class Layer2ModelClassifier:
     
     def classify_email(self, email_data: Dict) -> Dict:
         """
-        Classify email using DistilBERT model
+        Classify email using DistilBERT model with manual overrides
         
         Args:
             email_data: Processed email data
@@ -114,14 +115,26 @@ class Layer2ModelClassifier:
             # Prepare email text for classification
             email_text = self.prepare_email_text(email_data)
             
+            # Check for obvious phishing patterns first (manual override)
+            manual_override = self.check_manual_phishing_patterns(email_data)
+            
             # Tokenize and predict
             prediction_result = self.predict(email_text)
+            
+            # Apply manual override if detected
+            if manual_override['is_phishing']:
+                logger.warning(f"Manual phishing override triggered: {manual_override['reason']}")
+                prediction_result['label'] = 1  # Force malicious
+                prediction_result['confidence'] = manual_override['confidence']
+                prediction_result['override_reason'] = manual_override['reason']
             
             # Determine status based on confidence threshold
             status = self.determine_status(prediction_result)
             
             # Extract risk indicators
             risk_indicators = self.extract_risk_indicators(email_data, prediction_result)
+            if manual_override['is_phishing']:
+                risk_indicators.extend(manual_override['indicators'])
             
             result = {
                 'layer': 2,
@@ -131,14 +144,16 @@ class Layer2ModelClassifier:
                 'probabilities': prediction_result['probabilities'],
                 'risk_indicators': risk_indicators,
                 'processing_time': (datetime.utcnow() - start_time).total_seconds(),
-                'model_version': self.model_name
+                'model_version': self.model_name,
+                'manual_override': manual_override['is_phishing']
             }
             
             # Store prediction for training
             self.store_prediction(email_data, result)
             
             logger.info(f"Layer 2 classification: status={status}, "
-                       f"confidence={prediction_result['confidence']:.3f}")
+                       f"confidence={prediction_result['confidence']:.3f}, "
+                       f"override={manual_override['is_phishing']}")
             
             return result
             
@@ -208,8 +223,79 @@ class Layer2ModelClassifier:
             logger.error(f"Model prediction failed: {e}")
             raise
     
+    def check_manual_phishing_patterns(self, email_data: Dict) -> Dict:
+        """
+        Check for obvious phishing patterns that require manual override
+        
+        Args:
+            email_data: Processed email data
+            
+        Returns:
+            Dict with override information
+        """
+        subject = email_data.get('subject', '').lower()
+        body = email_data.get('body', '').lower()
+        sender = email_data.get('from', '').lower()
+        combined_text = f"{subject} {body}".lower()
+        
+        indicators = []
+        confidence = 0.95  # High confidence for manual overrides
+        
+        # Critical patterns that should always trigger phishing alert
+        critical_patterns = [
+            # Personal information requests
+            (r'\bssn\b|\bsocial security number\b|\bsocial security\b', 'Requests SSN/Social Security Number'),
+            (r'\btax id\b|\btaxpayer id\b|\btax identification\b', 'Requests Tax ID'),
+            (r'\bbank account number\b|\baccount number\b|\brouting number\b', 'Requests banking information'),
+            (r'\bcredit card number\b|\bdebit card\b|\bcard number\b', 'Requests credit card information'),
+            (r'\bpin number\b|\bpin code\b|\baccess code\b', 'Requests PIN/access codes'),
+            (r'\bpassword\b.*\bconfirm\b|\bverify.*password\b', 'Requests password verification'),
+            
+            # Urgent financial/health requests  
+            (r'\burgent.*medical\b|\bmedical.*urgent\b|\bhealth emergency\b', 'Urgent medical/health claims'),
+            (r'\bincome verification\b|\bverify.*income\b|\bw-2.*required\b', 'Income verification requests'),
+            (r'\btax.*verification\b|\birs.*verification\b|\btax.*compliance\b', 'Tax verification requests'),
+            (r'\bbenefit.*suspension\b|\bsuspend.*benefit\b|\bbenefits.*terminated\b', 'Benefit suspension threats'),
+            
+            # Impersonation of trusted entities
+            (r'\binternal revenue service\b|\birs\.gov\b|\birs\s+agent\b', 'IRS impersonation'),
+            (r'\bsocial security administration\b|\bssa\.gov\b|\bssa\s+office\b', 'SSA impersonation'),
+            (r'\bmedicare\.gov\b|\bmedicare\s+office\b|\bmedicare\s+admin\b', 'Medicare impersonation'),
+            (r'\bbank of america\b|\bchase bank\b|\bwells fargo\b.*\bofficial\b', 'Bank impersonation'),
+            
+            # Urgency with personal info
+            (r'\b24 hours?\b.*\bpersonal\b|\bimmediate.*verification\b', 'Urgent personal info requests'),
+            (r'\baccount.*suspended\b.*\bverify\b|\bsuspended.*account\b.*\bconfirm\b', 'Account suspension + verification'),
+            (r'\bidentity.*verification\b|\bverify.*identity\b.*\burgent\b', 'Identity verification under pressure'),
+        ]
+        
+        # Check each critical pattern
+        for pattern, description in critical_patterns:
+            if re.search(pattern, combined_text, re.IGNORECASE):
+                indicators.append(description)
+        
+        # Additional suspicious combinations
+        if re.search(r'\bclick here\b.*\bverify\b', combined_text, re.IGNORECASE) and \
+           re.search(r'\bsuspended\b|\blocked\b|\bexpir', combined_text, re.IGNORECASE):
+            indicators.append('Verification link with account threat')
+        
+        # Check for government/official sender mismatch
+        if ('irs' in combined_text or 'social security' in combined_text or 'medicare' in combined_text) and \
+           not any(domain in sender for domain in ['irs.gov', 'ssa.gov', 'medicare.gov']):
+            indicators.append('Government impersonation from unofficial domain')
+        
+        # Determine if this should override the model
+        is_phishing = len(indicators) > 0
+        
+        return {
+            'is_phishing': is_phishing,
+            'confidence': confidence if is_phishing else 0.0,
+            'reason': f"Manual override: {', '.join(indicators[:3])}" if is_phishing else None,
+            'indicators': indicators
+        }
+    
     def determine_status(self, prediction_result: Dict) -> str:
-        """Determine email status based on prediction"""
+        """Determine email status based on prediction with manual overrides"""
         confidence = prediction_result['confidence']
         label = prediction_result['label']
         

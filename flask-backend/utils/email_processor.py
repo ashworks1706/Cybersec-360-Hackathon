@@ -35,8 +35,11 @@ class EmailProcessor:
             Dict with processed email data
         """
         try:
+            # Handle both 'from' and 'sender' field names for compatibility
+            sender_field = email_data.get('from', email_data.get('sender', ''))
+            
             processed = {
-                'sender': self.normalize_sender(email_data.get('sender', '')),
+                'sender': self.normalize_sender(sender_field),
                 'subject': self.normalize_subject(email_data.get('subject', '')),
                 'body': self.normalize_body(email_data.get('body', '')),
                 'timestamp': self.normalize_timestamp(email_data.get('date', '')),
