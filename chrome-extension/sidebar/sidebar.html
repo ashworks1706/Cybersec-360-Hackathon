@@ -10,8 +10,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <link rel="stylesheet" href="sidebar.css">
 </head>
@@ -20,11 +20,11 @@
         <!-- Header -->
         <header class="sidebar-header">
             <div class="header-title">
-                <i data-lucide="shield-check" class="header-icon"></i>
+                <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
                 <h1>PhishGuard 360</h1>
             </div>
             <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">
-                <i data-lucide="x"></i>
+                <span class="material-icons">close</span>
             </button>
         </header>
 
@@ -52,7 +52,7 @@
                         <p>Checking against known spam databases</p>
                     </div>
                     <div class="layer-status" id="layer1Status">
-                        <i data-lucide="loader-2" class="status-icon pending"></i>
+                        <span class="material-icons status-icon pending">pending</span>
                     </div>
                 </div>
                 <div class="layer-details" id="layer1Details">
@@ -78,7 +78,7 @@
                         <p>DistilBERT model analysis</p>
                     </div>
                     <div class="layer-status" id="layer2Status">
-                        <i data-lucide="loader-2" class="status-icon pending"></i>
+                        <span class="material-icons status-icon pending">pending</span>
                     </div>
                 </div>
                 <div class="layer-details" id="layer2Details">
@@ -104,7 +104,7 @@
                         <p>Gemini LLM with RAG analysis</p>
                     </div>
                     <div class="layer-status" id="layer3Status">
-                        <i data-lucide="loader-2" class="status-icon pending"></i>
+                        <span class="material-icons status-icon pending">pending</span>
                     </div>
                 </div>
                 <div class="layer-details" id="layer3Details">
@@ -129,7 +129,7 @@
             <div class="verdict-content">
                 <div class="verdict-header">
                     <div class="verdict-icon-wrapper" id="verdictIconWrapper">
-                        <i data-lucide="shield-check" id="verdictIcon"></i>
+                        <span class="material-icons" id="verdictIcon">shield</span>
                     </div>
                     <div class="verdict-text">
                         <h2 id="verdictTitle">Scan Complete</h2>
@@ -156,15 +156,15 @@
         <!-- Action Buttons -->
         <div class="action-buttons" id="actionButtons" style="display: none;">
             <button class="btn btn-ghost" id="markSafeBtn">
-                <i data-lucide="check-circle"></i>
+                <span class="material-icons">check_circle</span>
                 <span>Mark Safe</span>
             </button>
             <button class="btn btn-ghost" id="reportPhishBtn">
-                <i data-lucide="alert-triangle"></i>
+                <span class="material-icons">warning</span>
                 <span>Report Phishing</span>
             </button>
             <button class="btn btn-ghost" id="blockSenderBtn">
-                <i data-lucide="ban"></i>
+                <span class="material-icons">block</span>
                 <span>Block Sender</span>
             </button>
         </div>
@@ -189,7 +189,7 @@
         <!-- Footer -->
         <footer class="sidebar-footer">
             <div class="footer-info">
-                <i data-lucide="clock" class="footer-icon"></i>
+                <span class="material-icons footer-icon">schedule</span>
                 <span id="scanTime">-</span>
             </div>
             <div class="footer-brand">
@@ -198,10 +198,6 @@
         </footer>
     </div>
 
-    <script>
-        // Initialize Lucide icons
-        lucide.createIcons();
-    </script>
     <script src="sidebar.js"></script>
 </body>
 </html>

@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhishGuard 360 - Scan History</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
     <link rel="stylesheet" href="history.css">
 </head>
 <body>
@@ -12,11 +21,7 @@
         <header class="history-header">
             <div class="header-content">
                 <div class="header-title">
-                    <svg class="shield-icon" viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"
-                              stroke="currentColor" stroke-width="2" fill="none"/>
-                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
+                    <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
                     <h1>PhishGuard 360</h1>
                 </div>
                 <div class="header-subtitle">
@@ -29,28 +34,36 @@
         <!-- Statistics Summary -->
         <div class="stats-container" id="statsContainer">
             <div class="stat-card">
-                <div class="stat-icon">📊</div>
+                <div class="stat-icon">
+                    <span class="material-icons">bar_chart</span>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="totalScans">0</div>
                     <div class="stat-label">Total Scans</div>
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon">✅</div>
+                <div class="stat-icon safe">
+                    <span class="material-icons">check_circle</span>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="safeEmails">0</div>
                     <div class="stat-label">Safe Emails</div>
                 </div>
             </div>
             <div class="stat-card danger">
-                <div class="stat-icon">❌</div>
+                <div class="stat-icon danger">
+                    <span class="material-icons">cancel</span>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="threatsBlocked">0</div>
                     <div class="stat-label">Threats Blocked</div>
                 </div>
             </div>
             <div class="stat-card warning">
-                <div class="stat-icon">⚠️</div>
+                <div class="stat-icon warning">
+                    <span class="material-icons">warning</span>
+                </div>
                 <div class="stat-content">
                     <div class="stat-value" id="suspiciousEmails">0</div>
                     <div class="stat-label">Suspicious Emails</div>
@@ -61,10 +74,7 @@
         <!-- Filters and Search -->
         <div class="filters-container">
             <div class="search-box">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-                    <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2"/>
-                </svg>
+                <span class="material-icons">search</span>
                 <input type="text" id="searchInput" placeholder="Search by sender or subject...">
             </div>
             <div class="filter-buttons">
@@ -74,11 +84,8 @@
                 <button class="filter-btn" data-filter="suspicious">Suspicious</button>
             </div>
             <button class="refresh-btn" id="refreshBtn">
-                <svg viewBox="0 0 24 24" fill="none">
-                    <path d="M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C14.76 3 17.23 4.24 18.83 6.18" stroke="currentColor" stroke-width="2"/>
-                    <path d="M15 6H21V12" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                Refresh
+                <span class="material-icons">refresh</span>
+                <span>Refresh</span>
             </button>
         </div>
 
@@ -90,7 +97,9 @@
 
         <!-- Error State -->
         <div class="error-container" id="errorContainer" style="display: none;">
-            <div class="error-icon">⚠️</div>
+            <div class="error-icon">
+                <span class="material-icons">error_outline</span>
+            </div>
             <h3>Failed to Load History</h3>
             <p id="errorMessage">An error occurred while loading scan history</p>
             <button class="retry-btn" id="retryBtn">Try Again</button>
@@ -98,7 +107,9 @@
 
         <!-- Empty State -->
         <div class="empty-container" id="emptyContainer" style="display: none;">
-            <div class="empty-icon">📭</div>
+            <div class="empty-icon">
+                <span class="material-icons">inbox</span>
+            </div>
             <h3>No Scan History</h3>
             <p>You haven't scanned any emails yet. Start scanning emails to see your history here.</p>
         </div>
@@ -153,7 +164,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>Scan Details</h3>
-                <button class="modal-close" id="modalClose">×</button>
+                <button class="modal-close" id="modalClose">
+                    <span class="material-icons">close</span>
+                </button>
             </div>
             <div class="modal-body" id="modalBody">
                 <!-- Scan details will be inserted here -->

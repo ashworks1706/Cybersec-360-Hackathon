@@ -276,10 +276,10 @@ class PhishGuardSidebar {
         this.statusIndicator.className = 'status-indicator warning';
         this.statusTitle.textContent = 'Scan Complete';
         this.statusMessage.textContent = 'Potential phishing attempt detected';
-        
+
         // Show verdict
         this.finalVerdict.style.display = 'block';
-        this.verdictIcon.textContent = '⚠️';
+        this.verdictIcon.textContent = 'warning';
         this.verdictTitle.textContent = 'Potential Threat Detected';
         this.verdictMessage.textContent = 'This email shows signs of phishing activity';
         this.scoreValue.textContent = riskScore;
@@ -487,8 +487,8 @@ class PhishGuardSidebar {
                     console.log('🔍 [DEBUG] Formatting', layer3.tactics_identified.length, 'tactics');
 
                     // Show tactics count prominently
-                    formattedHTML += `<div style="margin-bottom: 12px; padding: 8px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                        <strong>⚠️ ${layer3.tactics_identified.length} Social Engineering Tactics Detected</strong>
+                    formattedHTML += `<div style="margin-bottom: 12px; padding: 8px; background: #fffbeb; border-left: 4px solid #d97706; border-radius: 4px;">
+                        <strong>${layer3.tactics_identified.length} Social Engineering Tactics Detected</strong>
                     </div>`;
 
                     // Format each tactic with proper HTML
@@ -550,7 +550,8 @@ class PhishGuardSidebar {
             // Layer 3 was not executed (high confidence from Layer 2)
             this.updateLayerStatus('layer3', 'safe');
             document.getElementById('layer3Status').innerHTML =
-                '<div class="status-icon">ℹ️</div>';
+                '<span class="material-icons status-icon">info</span>';
+
             const layer3Card = document.getElementById('layer3');
             const messageElement = layer3Card.querySelector('.layer-info p');
             if (messageElement) {

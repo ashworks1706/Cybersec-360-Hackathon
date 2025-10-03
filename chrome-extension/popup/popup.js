@@ -126,9 +126,9 @@ class PhishGuardPopup {
     }
     
     getScanStatusIcon(scan) {
-        if (scan.finalVerdict === 'safe') return '✅';
-        if (scan.finalVerdict === 'threat') return '❌';
-        return '⚠️';
+        if (scan.finalVerdict === 'safe') return '<span class="material-icons status-icon safe">check_circle</span>';
+        if (scan.finalVerdict === 'threat') return '<span class="material-icons status-icon danger">cancel</span>';
+        return '<span class="material-icons status-icon warning">warning</span>';
     }
     
     getTimeAgo(timestamp) {
