@@ -101,6 +101,27 @@ class RAGDatabase:
                     created_at TEXT
                 )
             ''')
+
+            # Scan history table for tracking all scans
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS scan_history (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    scan_id TEXT UNIQUE,
+                    user_id TEXT,
+                    email_sender TEXT,
+                    email_subject TEXT,
+                    email_date TEXT,
+                    final_verdict TEXT,
+                    threat_level TEXT,
+                    confidence_score REAL,
+                    layer1_status TEXT,
+                    layer2_status TEXT,
+                    layer3_status TEXT,
+                    processing_time REAL,
+                    scan_timestamp TEXT,
+                    created_at TEXT
+                )
+            ''')
             
             conn.commit()
             conn.close()
@@ -498,45 +519,164 @@ class RAGDatabase:
             logger.error(f"Failed to get ML training data: {e}")
             return []
     
+    def store_scan_result(self, scan_result: Dict):
+        """Store scan result in scan history"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            # Extract layer statuses
+            layers = scan_result.get('layers', {})
+            layer1_status = json.dumps(layers.get('layer1', {}))
+            layer2_status = json.dumps(layers.get('layer2', {}))
+            layer3_status = json.dumps(layers.get('layer3', {}))
+
+            # Extract email data
+            email_data = scan_result.get('email_data', {})
+            email_sender = email_data.get('sender', 'unknown')
+            email_subject = email_data.get('subject', 'No subject')
+            email_date = email_data.get('date', datetime.utcnow().isoformat())
+
+            cursor.execute('''
+                INSERT OR REPLACE INTO scan_history
+                (scan_id, user_id, email_sender, email_subject, email_date,
+                 final_verdict, threat_level, confidence_score,
+                 layer1_status, layer2_status, layer3_status,
+                 processing_time, scan_timestamp, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                scan_result.get('scan_id'),
+                scan_result.get('user_id'),
+                email_sender,
+                email_subject,
+                email_date,
+                scan_result.get('final_verdict'),
+                scan_result.get('threat_level'),
+                scan_result.get('confidence_score'),
+                layer1_status,
+                layer2_status,
+                layer3_status,
+                scan_result.get('processing_time'),
+                scan_result.get('timestamp'),
+                datetime.utcnow().isoformat()
+            ))
+
+            conn.commit()
+            conn.close()
+
+            logger.info(f"Stored scan result {scan_result.get('scan_id')} in database")
+
+        except Exception as e:
+            logger.error(f"Failed to store scan result: {e}")
+            raise
+
+    def get_scan_history(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Dict]:
+        """
+        Get scan history for a specific user
+
+        Args:
+            user_id: User identifier
+            limit: Maximum number of results to return
+            offset: Number of results to skip
+
+        Returns:
+            List of scan history records
+        """
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                SELECT scan_id, email_sender, email_subject, email_date,
+                       final_verdict, threat_level, confidence_score,
+                       layer1_status, layer2_status, layer3_status,
+                       processing_time, scan_timestamp, created_at
+                FROM scan_history
+                WHERE user_id = ?
+                ORDER BY created_at DESC
+                LIMIT ? OFFSET ?
+            ''', (user_id, limit, offset))
+
+            results = cursor.fetchall()
+            conn.close()
+
+            scan_history = []
+            for result in results:
+                (scan_id, email_sender, email_subject, email_date,
+                 final_verdict, threat_level, confidence_score,
+                 layer1_status, layer2_status, layer3_status,
+                 processing_time, scan_timestamp, created_at) = result
+
+                scan_history.append({
+                    'scan_id': scan_id,
+                    'email_sender': email_sender,
+                    'email_subject': email_subject,
+                    'email_date': email_date,
+                    'final_verdict': final_verdict,
+                    'threat_level': threat_level,
+                    'confidence_score': confidence_score,
+                    'layers': {
+                        'layer1': json.loads(layer1_status) if layer1_status else {},
+                        'layer2': json.loads(layer2_status) if layer2_status else {},
+                        'layer3': json.loads(layer3_status) if layer3_status else {}
+                    },
+                    'processing_time': processing_time,
+                    'scan_timestamp': scan_timestamp,
+                    'created_at': created_at
+                })
+
+            return scan_history
+
+        except Exception as e:
+            logger.error(f"Failed to get scan history for {user_id}: {e}")
+            return []
+
     def get_database_statistics(self) -> Dict:
         """Get database statistics"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
-            
+
             stats = {}
-            
+
             # User experience stats
             cursor.execute('SELECT COUNT(*) FROM user_experience')
             stats['total_users'] = cursor.fetchone()[0]
-            
+
             # Suspect info stats
             cursor.execute('SELECT COUNT(*) FROM suspect_info')
             stats['total_suspects'] = cursor.fetchone()[0]
-            
+
             cursor.execute('SELECT AVG(frequency_count) FROM suspect_info')
             avg_frequency = cursor.fetchone()[0]
             stats['avg_suspect_frequency'] = avg_frequency if avg_frequency else 0
-            
+
             # Conversation history stats
             cursor.execute('SELECT COUNT(*) FROM conversation_history')
             stats['total_conversations'] = cursor.fetchone()[0]
-            
+
             # Threat intelligence stats
             cursor.execute('SELECT COUNT(*) FROM threat_intelligence')
             stats['total_threat_indicators'] = cursor.fetchone()[0]
-            
+
             # Email metadata stats
             cursor.execute('SELECT COUNT(*) FROM email_metadata')
             stats['total_emails_processed'] = cursor.fetchone()[0]
-            
+
             cursor.execute('SELECT COUNT(*) FROM email_metadata WHERE user_feedback IS NOT NULL')
             stats['emails_with_feedback'] = cursor.fetchone()[0]
-            
+
+            # Scan history stats
+            cursor.execute('SELECT COUNT(*) FROM scan_history')
+            stats['total_scans'] = cursor.fetchone()[0]
+
+            cursor.execute('SELECT COUNT(*) FROM scan_history WHERE final_verdict = "threat"')
+            stats['threats_detected'] = cursor.fetchone()[0]
+
             conn.close()
-            
+
             return stats
-            
+
         except Exception as e:
             logger.error(f"Failed to get database statistics: {e}")
             return {}

@@ -15,6 +15,7 @@ ENV/
 .idea/
 *.swp
 *.swo
+.claude/
 
 # Environment variables
 .env
@@ -22,3 +23,7 @@ ENV/
 
 # OS
 .DS_Store
+
+# Database files
+flask-backend/cache/*.db
+flask-backend/database/*.db

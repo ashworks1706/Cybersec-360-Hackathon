@@ -2,6 +2,7 @@
 # Advanced social engineering detection with user context
 
 import logging
+import os
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
@@ -10,6 +11,7 @@ try:
 except ImportError:
     genai = None
 from database.rag_database import RAGDatabase
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +34,28 @@ class Layer3DetectiveAgent:
     def setup_gemini(self):
         """Setup Google Gemini AI"""
         try:
-            # In production, load from environment variable
-            api_key = "YOUR_GEMINI_API_KEY"  # Replace with actual API key
+            # Load API key from environment configuration
+            api_key = Config.GEMINI_API_KEY
+
+            # Validate API key
+            if not api_key or api_key == 'your-gemini-api-key-here':
+                logger.error("GEMINI_API_KEY not configured. Please set it in .env file")
+                self.model = None
+                return
+
+            if not genai:
+                logger.error("google.generativeai module not installed. Install with: pip install google-generativeai")
+                self.model = None
+                return
+
+            # Configure Gemini with API key
             genai.configure(api_key=api_key)
-            
-            # Initialize model
-            self.model = genai.GenerativeModel('gemini-pro')
-            
-            logger.info("Gemini AI configured successfully")
-            
+
+            # Initialize model with latest flash model (fast and efficient for phishing detection)
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
+
+            logger.info("Gemini AI configured successfully with gemini-2.5-flash model")
+
         except Exception as e:
             logger.error(f"Failed to setup Gemini AI: {e}")
             self.model = None
@@ -65,15 +80,36 @@ PREVIOUS SCAN RESULTS:
 Layer 1: {layer1_results}
 Layer 2: {layer2_results}
 
-Please analyze this email and provide:
+CRITICAL: You must provide your analysis in this EXACT format:
 
-1. **Social Engineering Score** (0-100): Rate the likelihood this is a social engineering attack
-2. **Tactics Identified**: List specific social engineering tactics used
-3. **Personal Context Relevance**: How the attack relates to the user's profile
-4. **Threat Assessment**: Detailed explanation of the threat
-5. **Recommended Action**: What the user should do
+SOCIAL_ENGINEERING_SCORE: [number between 0-100]
 
-Be thorough but concise. Focus on patterns that indicate deception, manipulation, or impersonation.
+Then provide detailed analysis covering:
+
+Tactics Identified: List each specific social engineering tactic used (use bullet points with - or *)
+
+Personal Context Relevance: How the attack relates to the user's profile
+
+Threat Assessment: Detailed explanation of the threat
+
+Recommended Action: What the user should do
+
+SCORING GUIDE:
+- 0-20: No social engineering detected
+- 21-40: Minor manipulation attempts
+- 41-60: Moderate social engineering tactics (3-5 tactics)
+- 61-80: Significant social engineering (6-10 tactics)
+- 81-100: Severe/sophisticated social engineering attack (10+ tactics)
+
+FORMATTING REQUIREMENTS:
+- Use plain text only
+- NO markdown formatting (no asterisks, no hashtags, no bold/italic markers)
+- Use simple bullet points with dash (-)
+- Keep section headers as plain text followed by colon
+- Each tactic should be a separate bullet point
+- Do not use parentheses in section headers
+
+Be thorough in identifying tactics. Focus on patterns that indicate deception, manipulation, or impersonation.
 """,
             
             'impersonation_detection': """
@@ -151,6 +187,7 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
                 'personal_context': final_assessment.get('personal_relevance', 'none'),
                 'detailed_analysis': final_assessment.get('analysis', ''),
                 'recommended_action': final_assessment.get('recommendation', ''),
+                'risk_score': final_assessment.get('total_score', 0),  # Comprehensive risk score from all Layer 3 analyses
                 'processing_time': (datetime.utcnow() - start_time).total_seconds()
             }
             
@@ -185,13 +222,13 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
             logger.error(f"Failed to get user experience: {e}")
             return {}
     
-    def analyze_social_engineering(self, email_data: Dict, user_context: Dict, 
+    def analyze_social_engineering(self, email_data: Dict, user_context: Dict,
                                  layer2_results: Dict) -> Dict:
         """Analyze email for social engineering tactics"""
         try:
             if not self.model:
                 return self.fallback_social_engineering_analysis(email_data)
-            
+
             # Prepare prompt
             prompt = self.prompts['social_engineering_analysis'].format(
                 subject=email_data.get('subject', ''),
@@ -201,16 +238,37 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
                 layer1_results="Clean - no known spam signatures",
                 layer2_results=json.dumps(layer2_results, indent=2)
             )
-            
+
             # Get Gemini analysis
             response = self.model.generate_content(prompt)
             analysis_text = response.text
-            
+
             # Parse the response
             analysis = self.parse_gemini_response(analysis_text)
-            
+
+            # VALIDATE: Ensure score correlates with tactics count
+            tactics_count = len(analysis.get('tactics', []))
+            gemini_score = analysis.get('score', 0)
+
+            # Calculate expected score based on tactics (each tactic = ~8 points)
+            expected_score = min(tactics_count * 8, 100)
+
+            # If Gemini's score is significantly lower than expected, use calculated score
+            if tactics_count >= 5 and gemini_score < (expected_score * 0.5):
+                logger.warning(f"Score validation: Gemini returned {gemini_score}% with {tactics_count} tactics. "
+                             f"Overriding to {expected_score}%")
+                analysis['score'] = expected_score
+            elif tactics_count >= 3 and gemini_score < 20:
+                # At least moderate score if multiple tactics detected
+                adjusted_score = max(gemini_score, expected_score)
+                logger.warning(f"Score validation: Adjusting score from {gemini_score}% to {adjusted_score}% "
+                             f"({tactics_count} tactics detected)")
+                analysis['score'] = adjusted_score
+            else:
+                logger.info(f"Score validation: Gemini score {gemini_score}% is reasonable for {tactics_count} tactics")
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"Social engineering analysis failed: {e}")
             return self.fallback_social_engineering_analysis(email_data)
@@ -375,40 +433,79 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
     def parse_gemini_response(self, response_text: str) -> Dict:
         """Parse Gemini AI response into structured data"""
         try:
-            # This is a simplified parser - in production, use more robust parsing
+            import re
+
             analysis = {
-                'score': 50,  # default
+                'score': 50,  # default fallback
                 'tactics': [],
                 'analysis': response_text
             }
-            
-            # Extract score if present
+
+            # Extract score with improved pattern matching
             lines = response_text.split('\n')
+            score_found = False
+
             for line in lines:
-                if 'score' in line.lower() and any(char.isdigit() for char in line):
-                    import re
-                    numbers = re.findall(r'\d+', line)
-                    if numbers:
-                        analysis['score'] = min(int(numbers[0]), 100)
-                        break
-            
+                # Look for specific format: SOCIAL_ENGINEERING_SCORE: 75
+                score_match = re.search(r'SOCIAL_ENGINEERING_SCORE:\s*(\d+)', line, re.IGNORECASE)
+                if score_match:
+                    analysis['score'] = min(int(score_match.group(1)), 100)
+                    score_found = True
+                    logger.info(f"Extracted score from Gemini: {analysis['score']}%")
+                    break
+
+                # Fallback: Look for "Score: 75" or "score is 75" patterns
+                # But skip lines that start with list numbers like "1. Score"
+                if not score_found and 'score' in line.lower():
+                    # Skip if line starts with a list number (e.g., "1.", "2.")
+                    if re.match(r'^\s*\d+\.', line.strip()):
+                        continue
+
+                    # Look for pattern like ": 75" or "is 75"
+                    number_match = re.search(r':\s*(\d+)|is\s+(\d+)', line)
+                    if number_match:
+                        score_value = number_match.group(1) or number_match.group(2)
+                        if score_value and 0 <= int(score_value) <= 100:
+                            analysis['score'] = int(score_value)
+                            score_found = True
+                            logger.info(f"Extracted score (fallback method): {analysis['score']}%")
+                            break
+
+            if not score_found:
+                logger.warning("Could not extract score from Gemini response, using default: 50")
+
             # Extract tactics
             tactics_section = False
             for line in lines:
-                if 'tactics' in line.lower():
+                if 'tactics' in line.lower() and 'identified' in line.lower():
                     tactics_section = True
                     continue
-                
+
                 if tactics_section and line.strip():
-                    if line.startswith('-') or line.startswith('*'):
-                        tactic = line.strip().lstrip('-*').strip()
-                        if tactic:
+                    # Extract tactics from bullet points
+                    if line.strip().startswith(('-', '*', '•')):
+                        tactic = re.sub(r'^[-*•]\s*', '', line.strip())
+                        if tactic and len(tactic) > 10:  # Avoid empty or too short entries
                             analysis['tactics'].append(tactic)
-                    elif not line.startswith(' '):
+                    # Handle comma-separated tactics (e.g., "Malware Installation: ..., Further Data Harvesting: ..., Bypassing Security Filters: ...")
+                    elif ',' in line and ':' in line:
+                        # Split by comma and clean up
+                        potential_tactics = line.split(',')
+                        for potential_tactic in potential_tactics:
+                            cleaned = potential_tactic.strip()
+                            # Only add if it has a colon (tactic name: description format) and is long enough
+                            if ':' in cleaned and len(cleaned) > 15:
+                                analysis['tactics'].append(cleaned)
+                    # Stop if we hit next section
+                    elif line.strip().startswith('**') and 'tactics' not in line.lower():
                         tactics_section = False
-            
+                    elif 'Personal Context Relevance' in line or 'Threat Assessment' in line or 'Recommended Action' in line:
+                        tactics_section = False
+
+            logger.info(f"Parsed {len(analysis['tactics'])} tactics from Gemini response")
+
             return analysis
-            
+
         except Exception as e:
             logger.error(f"Failed to parse Gemini response: {e}")
             return {'score': 50, 'tactics': [], 'analysis': response_text}

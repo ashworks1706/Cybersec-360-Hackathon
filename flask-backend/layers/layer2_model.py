@@ -327,26 +327,41 @@ class Layer2ModelClassifier:
     
     def fallback_classification(self, email_data: Dict) -> Dict:
         """Fallback classification when model is not available"""
-        logger.warning("Using fallback classification (model not available)")
-        
+        logger.warning("Using fallback classification (model not available) - Layer 3 will be invoked")
+
         # Simple rule-based fallback
         subject = email_data.get('subject', '').lower()
         body = email_data.get('body', '').lower()
-        
+
         # Basic suspicious patterns
         suspicious_patterns = [
             'verify account', 'suspended', 'click here', 'urgent action',
             'confirm identity', 'expires soon', 'limited time'
         ]
-        
+
         threat_score = 0
+        detected_patterns = []
         for pattern in suspicious_patterns:
             if pattern in subject or pattern in body:
                 threat_score += 1
-        
-        confidence = min(0.6 + (threat_score * 0.1), 0.9)
-        status = 'suspicious' if threat_score > 2 else 'benign'
-        
+                detected_patterns.append(pattern)
+
+        # Use lower confidence to ensure Layer 3 is always triggered
+        # Fallback is unreliable, so we want Layer 3 to do the heavy lifting
+        if threat_score > 2:
+            confidence = min(0.4 + (threat_score * 0.05), 0.7)
+            status = 'suspicious'
+        else:
+            # Even for "benign" in fallback mode, use low confidence
+            # This ensures Layer 3 detective agent is always invoked
+            confidence = 0.5  # Just at threshold - Layer 3 will run
+            status = 'benign'
+
+        risk_indicators = [f"Rule-based fallback detection: {threat_score} suspicious patterns"]
+        if detected_patterns:
+            risk_indicators.append(f"Detected patterns: {', '.join(detected_patterns)}")
+        risk_indicators.append("⚠️ Fallback mode active - Layer 3 analysis recommended")
+
         return {
             'layer': 2,
             'status': status,
@@ -356,9 +371,10 @@ class Layer2ModelClassifier:
                 'benign': 1 - confidence if status == 'suspicious' else confidence,
                 'malicious': confidence if status == 'suspicious' else 1 - confidence
             },
-            'risk_indicators': [f"Rule-based detection: {threat_score} suspicious patterns"],
+            'risk_indicators': risk_indicators,
             'processing_time': 0.1,
-            'model_version': 'fallback_rules'
+            'model_version': 'fallback_rules',
+            'fallback_mode': True  # Flag to indicate this is fallback classification
         }
     
     def retrain_model(self):

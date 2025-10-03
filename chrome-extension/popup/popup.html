@@ -4,17 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PhishGuard 360</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
     <link rel="stylesheet" href="popup.css">
 </head>
 <body>
     <div class="popup-container">
         <div class="popup-header">
             <div class="header-title">
-                <svg class="shield-icon" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z" 
-                          stroke="currentColor" stroke-width="2" fill="none"/>
-                    <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" fill="none"/>
-                </svg>
+                <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
                 <h1>PhishGuard 360</h1>
             </div>
             <div class="version">v1.0.0</div>
@@ -40,19 +45,13 @@
             <!-- Quick Actions -->
             <div class="quick-actions">
                 <button class="action-btn primary" id="scanCurrentEmail">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z" 
-                              stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                    Scan Current Email
+                    <span class="material-icons">security</span>
+                    <span>Scan Current Email</span>
                 </button>
-                
+
                 <button class="action-btn secondary" id="viewHistory">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" fill="none"/>
-                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
-                    </svg>
-                    View Scan History
+                    <span class="material-icons">history</span>
+                    <span>View Scan History</span>
                 </button>
             </div>
 

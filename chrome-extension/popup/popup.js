@@ -59,7 +59,8 @@ class PhishGuardPopup {
     
     getScanHistory() {
         return new Promise((resolve) => {
-            chrome.storage.sync.get(['scanHistory'], (result) => {
+            // Use LOCAL storage for scan history (larger limit, avoids quota errors)
+            chrome.storage.local.get(['scanHistory'], (result) => {
                 resolve(result.scanHistory || []);
             });
         });
@@ -97,17 +98,17 @@ class PhishGuardPopup {
             `;
             return;
         }
-        
-        // Show last 5 scans
-        const recentScans = this.scanHistory.slice(0, 5);
-        
+
+        // Show last 5 scans, normalize each before rendering
+        const recentScans = this.scanHistory.slice(0, 5).map(scan => this.normalizeScan(scan)).filter(scan => scan !== null);
+
         this.recentScansList.innerHTML = recentScans.map(scan => {
             const statusClass = this.getScanStatusClass(scan);
             const statusIcon = this.getScanStatusIcon(scan);
             const timeAgo = this.getTimeAgo(scan.timestamp);
-            
+
             return `
-                <div class="scan-item ${statusClass}">
+                <div class="scan-item ${statusClass}" data-scan-id="${scan.scanId}" style="cursor: pointer;">
                     <div class="scan-info">
                         <div class="scan-sender">${this.truncateText(scan.emailData?.sender || 'Unknown', 25)}</div>
                         <div class="scan-time">${timeAgo}</div>
@@ -116,6 +117,16 @@ class PhishGuardPopup {
                 </div>
             `;
         }).join('');
+
+        // Add click handlers to scan items
+        document.querySelectorAll('.scan-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const scanId = item.dataset.scanId;
+                if (scanId) {
+                    this.openScanInHistory(scanId);
+                }
+            });
+        });
     }
     
     getScanStatusClass(scan) {
@@ -125,25 +136,64 @@ class PhishGuardPopup {
     }
     
     getScanStatusIcon(scan) {
-        if (scan.finalVerdict === 'safe') return '✅';
-        if (scan.finalVerdict === 'threat') return '❌';
-        return '⚠️';
+        if (scan.finalVerdict === 'safe') return '<span class="material-icons status-icon safe">check_circle</span>';
+        if (scan.finalVerdict === 'threat') return '<span class="material-icons status-icon danger">cancel</span>';
+        return '<span class="material-icons status-icon warning">warning</span>';
     }
     
     getTimeAgo(timestamp) {
+        // Handle invalid timestamps
+        if (!timestamp) return 'Unknown';
+
+        // Convert ISO string timestamps to Unix timestamp
+        let timestampMs;
+        if (typeof timestamp === 'string') {
+            // Parse ISO string (e.g., "2025-10-03T05:52:00.868000")
+            const date = new Date(timestamp);
+            if (isNaN(date.getTime())) return 'Unknown';
+            timestampMs = date.getTime();
+        } else if (typeof timestamp === 'number') {
+            timestampMs = timestamp;
+        } else {
+            return 'Unknown';
+        }
+
         const now = Date.now();
-        const diff = now - timestamp;
-        
+        const diff = now - timestampMs;
+
+        // Handle invalid diff (negative or NaN)
+        if (isNaN(diff) || diff < 0) return 'Just now';
+
         const minutes = Math.floor(diff / (1000 * 60));
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-        
+
         if (minutes < 1) return 'Just now';
         if (minutes < 60) return `${minutes}m ago`;
         if (hours < 24) return `${hours}h ago`;
         return `${days}d ago`;
     }
-    
+
+    normalizeScan(scan) {
+        // Normalize scan data to handle both snake_case (from backend) and camelCase (from local storage)
+        if (!scan) return null;
+
+        return {
+            scanId: scan.scanId || scan.scan_id,
+            timestamp: scan.timestamp || scan.scan_timestamp || scan.created_at,
+            emailData: scan.emailData || scan.email_data || {
+                sender: scan.email_sender || 'Unknown',
+                subject: scan.email_subject || 'No subject',
+                date: scan.email_date || scan.timestamp
+            },
+            finalVerdict: scan.finalVerdict || scan.final_verdict || 'unknown',
+            threatLevel: scan.threatLevel || scan.threat_level || 'unknown',
+            confidenceScore: scan.confidenceScore || scan.confidence_score || 0,
+            layers: scan.layers || {},
+            processingTime: scan.processingTime || scan.processing_time || 0
+        };
+    }
+
     truncateText(text, maxLength) {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength - 3) + '...';
@@ -191,7 +241,13 @@ class PhishGuardPopup {
             // Get current active tab
             const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
             const currentTab = tabs[0];
-            
+
+            // Safety check: ensure we have a valid tab
+            if (!currentTab) {
+                this.showNotification('No active tab found', 'error');
+                return;
+            }
+
             if (!currentTab.url.includes('mail.google.com') && !currentTab.url.includes('gmail.com')) {
                 this.showNotification('Please navigate to Gmail to scan emails', 'warning');
                 return;
@@ -202,27 +258,29 @@ class PhishGuardPopup {
                 const pingResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
                 console.log('Content script ping successful:', pingResponse);
             } catch (pingError) {
-                console.warn('Content script not responding, attempting injection...');
-                
+                // This is normal if Gmail was loaded before extension reload
+                console.log('Content script not loaded, injecting...');
+
                 try {
                     // Inject content script if it's not already there
                     await chrome.scripting.executeScript({
                         target: { tabId: currentTab.id },
                         files: ['scripts/content.js']
                     });
-                    
+
                     // Inject CSS as well
                     await chrome.scripting.insertCSS({
                         target: { tabId: currentTab.id },
                         files: ['styles/content.css']
                     });
-                    
+
                     // Wait a moment for initialization
                     await new Promise(resolve => setTimeout(resolve, 2000));
-                    
+
                     // Try ping again
                     await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
-                    
+                    console.log('Content script injected successfully');
+
                 } catch (injectionError) {
                     console.error('Failed to inject content script:', injectionError);
                     this.showNotification('Please refresh Gmail and try again', 'error');
@@ -256,11 +314,11 @@ class PhishGuardPopup {
             // Send message to content script to start scan
             try {
                 const scanResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'TRIGGER_SCAN', source: 'popup' }, 5000);
-                
+
                 if (scanResponse && scanResponse.success) {
-                    this.showNotification('Email scan started!', 'success');
-                    // Close popup to show sidebar
-                    setTimeout(() => window.close(), 500);
+                    // Close popup immediately after successful scan trigger
+                    // The sidebar will open automatically
+                    window.close();
                 } else {
                     this.showNotification(scanResponse?.error || 'Failed to start scan', 'error');
                 }
@@ -316,6 +374,12 @@ class PhishGuardPopup {
     openHistoryPage() {
         chrome.tabs.create({
             url: chrome.runtime.getURL('pages/history.html')
+        });
+    }
+
+    openScanInHistory(scanId) {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL(`pages/history.html?scanId=${scanId}`)
         });
     }
     
