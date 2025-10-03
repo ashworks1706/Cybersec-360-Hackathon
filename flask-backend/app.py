@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 # Import our detection layers
@@ -53,7 +53,7 @@ class PhishGuardBackend:
                 'status': 'healthy',
                 'service': 'PhishGuard 360',
                 'version': '1.0.0',
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             })
         
         @self.app.route('/api/scan', methods=['POST'])
