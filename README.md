@@ -1,53 +1,77 @@
-# Cybersec 360 Hackathon - Email Phishing Detection System
+# PhishGuard 360 - Advanced Email Security System
 
 ## 🎯 Project Overview
 
 A sophisticated multi-layer email phishing detection system that combines:
-- **Chrome Extension**: Gmail integration with sidebar scanning interface
-- **Flask Backend**: Three-layer security analysis system
-- **AI/ML Pipeline**: DistilBERT classification + Gemini LLM with RAG database
+- **Chrome Extension**: Gmail integration with comprehensive profile & dashboard interface
+- **Flask Backend**: Three-layer security analysis system with RAG database
+- **AI/ML Pipeline**: DistilBERT classification + Gemini LLM with intelligent detective analysis
+- **Docker Deployment**: Production-ready containerized architecture
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-### Layer 1: Public Spam Database Lookup
-- Quick hash-based lookup against known spam databases
-- Pattern matching for suspicious content
+### Layer 1: Database Pattern Matching (1-3ms)
+- Lightning-fast hash-based lookup against known threat databases
+- Pattern matching for suspicious content and sender reputation
 - Immediate rejection of known malicious emails
 
-### Layer 2: Pretrained Model Classification  
-- DistilBERT-based email classification (`cybersectony/phishing-email-detection-distilbert_v2.1`)
-- Confidence-based routing to Layer 3
-- Continuous fine-tuning with real-world data
+### Layer 2: Custom DistilBERT AI Model (20-50ms)  
+- Fine-tuned DistilBERT classifier for phishing detection
+- Confidence-based routing to Layer 3 for uncertain cases
+- Real-time email content analysis and classification
 
-### Layer 3: Gemini LLM Detective Agent
-- RAG database integration for user context
-- Social engineering pattern detection
-- Suspect information collection and storage
-- 10-hour conversation monitoring with auto-junk after timeout
+### Layer 3: Gemini Detective Agent + RAG (15-30s)
+- Advanced social engineering detection using Google Gemini 2.0-flash
+- RAG database integration for personalized user context
+- Conversation monitoring and impersonation analysis
+- Intelligent threat intelligence collection
 
-## 🚀 Quick Start
+## 🚀 Quick Deployment
 
-### 1. Backend Setup
+### 🐳 Production (Docker - Recommended)
 ```bash
-cd flask-backend
-pip install -r requirements.txt
-python run.py
-```
-Backend runs at `http://localhost:5000`
+# 1. Clone repository
+git clone https://github.com/ashworks1706/Cybersec-360-hackathon.git
+cd Cybersec-360-hackathon
 
-### 2. Chrome Extension Setup
-1. Open Chrome → `chrome://extensions/`
-2. Enable "Developer mode"
-3. Click "Load unpacked" → Select `chrome-extension` folder
-4. Navigate to Gmail and look for "Scan Email" button
+# 2. Configure environment
+cp .env.template .env
+nano .env  # Add your API keys (GEMINI_API_KEY, HUGGINGFACE_API_KEY)
 
-### 3. Test the System
-```bash
-cd flask-backend
-python test_backend.py
+# 3. Deploy with one command
+./deploy.sh
 ```
 
-## ✅ Current Status
+**Access URLs:**
+- **Main Application**: https://localhost
+- **API Documentation**: https://localhost/api
+- **Monitoring Dashboard**: http://localhost:9090
+
+### 🛠️ Development Setup
+```bash
+# Quick development environment
+./dev-setup.sh
+```
+
+**Development URLs:**
+- **Backend API**: http://localhost:5000
+- **Database Admin**: http://localhost:8080
+- **Redis Cache**: http://localhost:6379
+
+## 📋 Prerequisites
+
+### For Docker Deployment
+- Docker Engine 20.10+
+- Docker Compose 2.0+
+- 4GB+ RAM, 10GB+ disk space
+
+### For Manual Setup
+- Python 3.9+
+- Node.js 16+ (for extension building)
+- Google Gemini API Key
+- Hugging Face API Key
+
+## ✅ Current Features
 
 ### ✅ **Phase 1-2: Chrome Extension** 
 - [x] Manifest v3 configuration
@@ -326,19 +350,64 @@ Complete 12-slide presentation guide available in [`PRESENTATION_GUIDE.md`](PRES
 
 ## 🎯 Hackathon Completion Status
 
-### ✅ **Phase 10: Presentation & Demo Ready**
-- [x] Complete presentation guide with 12-slide structure
-- [x] Official branding and slogan development
-- [x] Demo script and technical talking points
-- [x] Visual design guidelines and color scheme
-- [x] Competitive advantages and differentiators
+### ✅ **Phase 10: Frontend Enhancement Complete**
+- [x] Comprehensive profile management interface (4-tab system)
+- [x] Security dashboard with real-time metrics
+- [x] Professional Material Design UI/UX
+- [x] Complete Chrome extension navigation system
+- [x] API integration for user data management
 
-### ✅ **Phase 11: Final Documentation Complete**
-- [x] Comprehensive README with all project details
-- [x] Complete presentation guide and demo instructions
-- [x] Technical architecture documentation
-- [x] Test results and performance metrics
-- [x] Future roadmap and vision statement
+### ✅ **Phase 11: Production Docker Deployment**
+- [x] Multi-stage Docker build optimization
+- [x] Production-ready docker-compose setup
+- [x] Nginx reverse proxy with SSL termination
+- [x] Redis caching layer integration
+- [x] Prometheus monitoring system
+- [x] Automated deployment scripts
+- [x] Development environment setup
 
-### 🏆 **Ready for Competition!**
-All hackathon deliverables complete and tested. System is production-ready with comprehensive documentation and presentation materials.
+### ✅ **Phase 12: Security & Monitoring**
+- [x] Rate limiting and security headers
+- [x] Health checks and service monitoring
+- [x] Volume persistence for data
+- [x] SSL/TLS configuration
+- [x] Production deployment guide
+
+### 🏆 **Production-Ready System!**
+Complete containerized deployment with enterprise-grade security, monitoring, and scalability features.
+
+## 🐳 Docker Deployment
+
+### Production Deployment
+```bash
+# One-command deployment
+./deploy.sh
+
+# Manual deployment
+docker-compose up -d
+```
+
+### Development Environment
+```bash
+# Development setup with hot reload
+./dev-setup.sh
+
+# Manual development
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+### Service Architecture
+- **phishguard-backend**: Flask API server with multi-layer security
+- **nginx**: Reverse proxy with SSL, rate limiting, and security headers
+- **redis**: High-performance caching layer
+- **prometheus**: Monitoring and metrics collection
+
+### Key Features
+- 🔒 **SSL/TLS encryption** with modern cipher suites
+- 🛡️ **Security headers** (HSTS, CSP, X-Frame-Options)
+- ⚡ **Rate limiting** (10 req/s API, 1 req/s general)
+- 📊 **Health monitoring** with automatic restarts
+- 💾 **Data persistence** with Docker volumes
+- 🔄 **Auto-scaling** ready configuration
+
+For detailed Docker documentation, see [DOCKER.md](DOCKER.md)

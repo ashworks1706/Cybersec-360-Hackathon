@@ -1,0 +1,155 @@
+# PhishGuard 360 - Docker Ignore
+# Exclude unnecessary files from Docker build context
+
+# ============================================
+# Git and Version Control
+# ============================================
+.git
+.gitignore
+.gitattributes
+*.git*
+
+# ============================================
+# Documentation and README files
+# ============================================
+*.md
+README*
+CHANGELOG*
+LICENSE*
+docs/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+architecture.png
+extension1.png
+extension2.png
+
+# ============================================
+# Environment and Configuration
+# ============================================
+.env
+.env.*
+!.env.template
+.venv/
+venv/
+env/
+
+# ============================================
+# IDE and Editor files
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# ============================================
+# Testing
+# ============================================
+.tox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ============================================
+# Jupyter Notebooks
+# ============================================
+.ipynb_checkpoints
+
+# ============================================
+# Node.js (if any frontend build tools)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# Logs and temporary files
+# ============================================
+logs/
+*.log
+tmp/
+temp/
+.tmp/
+
+# ============================================
+# Database files (will be in volumes)
+# ============================================
+*.db
+*.sqlite
+*.sqlite3
+database/data/
+
+# ============================================
+# Model files (will be downloaded/mounted)
+# ============================================
+models/
+*.pkl
+*.h5
+*.model
+*.bin
+
+# ============================================
+# Upload directories
+# ============================================
+uploads/
+files/
+
+# ============================================
+# Docker related
+# ============================================
+docker-compose.override.yml
+.dockerignore
+
+# ============================================
+# Monitoring and metrics
+# ============================================
+prometheus_data/
+grafana_data/
+
+# ============================================
+# Chrome Extension (development files)
+# ============================================
+chrome-extension/node_modules/
+chrome-extension/dist/
+chrome-extension/*.zip
+
+# ============================================
+# Hackathon resources (not needed in production)
+# ============================================
+hackathon-resources/

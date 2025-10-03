@@ -28,6 +28,9 @@ class PhishGuardBackend:
         self.app = Flask(__name__)
         CORS(self.app, origins=['chrome-extension://*', 'http://localhost:*'])
         
+        # Track startup time for metrics
+        self.start_time = datetime.now(timezone.utc)
+        
         # Initialize detection layers
         self.layer1 = Layer1DatabaseChecker()
         self.layer2 = Layer2ModelClassifier()
@@ -48,13 +51,70 @@ class PhishGuardBackend:
         
         @self.app.route('/api/health', methods=['GET'])
         def health_check():
-            """Health check endpoint"""
-            return jsonify({
-                'status': 'healthy',
-                'service': 'PhishGuard 360',
-                'version': '1.0.0',
-                'timestamp': datetime.now(timezone.utc).isoformat()
-            })
+            """Comprehensive health check endpoint for Docker health checks"""
+            try:
+                # Check database connectivity
+                db_status = self.rag_db.health_check()
+                
+                # Check layer status
+                layer1_status = self.layer1.is_healthy()
+                layer2_status = self.layer2.is_healthy()
+                layer3_status = self.layer3.is_healthy()
+                
+                # Overall health
+                all_healthy = db_status and layer1_status and layer2_status and layer3_status
+                
+                health_data = {
+                    'status': 'healthy' if all_healthy else 'degraded',
+                    'service': 'PhishGuard 360',
+                    'version': '1.0.0',
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'components': {
+                        'database': 'healthy' if db_status else 'unhealthy',
+                        'layer1_database': 'healthy' if layer1_status else 'unhealthy',
+                        'layer2_model': 'healthy' if layer2_status else 'unhealthy',
+                        'layer3_detective': 'healthy' if layer3_status else 'unhealthy'
+                    },
+                    'environment': os.getenv('FLASK_ENV', 'production')
+                }
+                
+                status_code = 200 if all_healthy else 503
+                return jsonify(health_data), status_code
+                
+            except Exception as e:
+                logger.error(f"Health check failed: {e}")
+                return jsonify({
+                    'status': 'unhealthy',
+                    'service': 'PhishGuard 360',
+                    'error': str(e),
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }), 503
+        
+        @self.app.route('/api/metrics', methods=['GET'])
+        def metrics():
+            """Prometheus metrics endpoint"""
+            try:
+                # Basic metrics for monitoring
+                metrics_data = {
+                    'phishguard_health_status': 1 if self.rag_db.health_check() else 0,
+                    'phishguard_uptime_seconds': (datetime.now(timezone.utc) - self.start_time).total_seconds(),
+                    'phishguard_total_scans': self.get_total_scans(),
+                    'phishguard_threats_blocked': self.get_threats_blocked(),
+                    'phishguard_layer1_response_time': self.layer1.get_avg_response_time(),
+                    'phishguard_layer2_response_time': self.layer2.get_avg_response_time(),
+                    'phishguard_layer3_response_time': self.layer3.get_avg_response_time()
+                }
+                
+                # Convert to Prometheus format
+                prometheus_metrics = []
+                for key, value in metrics_data.items():
+                    prometheus_metrics.append(f"{key} {value}")
+                
+                return '\n'.join(prometheus_metrics), 200, {'Content-Type': 'text/plain'}
+                
+            except Exception as e:
+                logger.error(f"Metrics collection failed: {e}")
+                return "# Metrics collection failed\n", 500, {'Content-Type': 'text/plain'}
         
         @self.app.route('/api/scan', methods=['POST'])
         def scan_email():
@@ -404,6 +464,20 @@ class PhishGuardBackend:
             logger.error(f"Failed to store scan result in database: {str(e)}")
 
         return scan_result
+    
+    def get_total_scans(self):
+        """Get total number of scans performed"""
+        try:
+            return self.rag_db.get_total_scans()
+        except:
+            return 0
+    
+    def get_threats_blocked(self):
+        """Get total number of threats blocked"""
+        try:
+            return self.rag_db.get_threats_blocked()
+        except:
+            return 0
     
     def run(self, host='localhost', port=5000, debug=True):
         """Run the Flask application"""
