@@ -1,10 +1,20 @@
 // PhishGuard 360 - Content Script for Gmail Integration
 // Detects Gmail interface and injects security scanning functionality
 
-// Prevent multiple initializations
-if (window.phishGuardInitialized) {
-    console.log('PhishGuard already initialized, skipping...');
-} else {
+// Prevent conflicts with Gmail's service worker
+(function() {
+    'use strict';
+    
+    // Check if we're in a safe environment
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return;
+    }
+    
+    // Prevent multiple initializations
+    if (window.phishGuardInitialized) {
+        console.log('PhishGuard already initialized, skipping...');
+        return;
+    }
     window.phishGuardInitialized = true;
 
     class PhishGuardScanner {
@@ -15,6 +25,8 @@ if (window.phishGuardInitialized) {
             this.scanInProgress = false;
             this.debounceTimer = null;
             this.lastCheckedUrl = '';
+            this.sidebarReady = false;
+            this.pendingScanResults = null;
 
             if (this.isGmailPage) {
                 this.initializeScanner();
@@ -106,9 +118,25 @@ if (window.phishGuardInitialized) {
         window.addEventListener('message', (event) => {
             // Only accept messages from our sidebar iframe
             if (event.data && event.data.type) {
-                console.log('PhishGuard: Received window message:', event.data);
+                console.log('PhishGuard: Received window message:', event.data.type);
 
                 switch (event.data.type) {
+                    case 'SIDEBAR_READY':
+                        console.log('PhishGuard: Sidebar is ready to receive messages');
+                        this.sidebarReady = true;
+
+                        // If we have pending scan results, send them now
+                        if (this.pendingScanResults) {
+                            console.log('PhishGuard: Sending pending scan results to now-ready sidebar');
+                            this.displayScanResults(this.pendingScanResults);
+                            this.pendingScanResults = null;
+                        }
+                        break;
+
+                    case 'SCAN_RESULTS_ACK':
+                        console.log('PhishGuard: Sidebar acknowledged receipt of scan results');
+                        break;
+
                     case 'CLOSE_SIDEBAR':
                         this.closeSidebar();
                         break;
@@ -495,12 +523,20 @@ if (window.phishGuardInitialized) {
         try {
             console.log('PhishGuard: Sending scan request to background script');
 
-            // Send scan request to background script (which will call Flask API)
-            const response = await chrome.runtime.sendMessage({
-                type: 'PERFORM_SCAN',
-                emailData: emailData,
-                userId: await this.getUserId()
+            // Add timeout to prevent hanging requests
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Scan request timeout')), 30000); // 30 second timeout
             });
+
+            // Send scan request to background script (which will call Flask API)
+            const response = await Promise.race([
+                chrome.runtime.sendMessage({
+                    type: 'PERFORM_SCAN',
+                    emailData: emailData,
+                    userId: await this.getUserId()
+                }),
+                timeoutPromise
+            ]);
 
             if (!response || !response.success) {
                 throw new Error(response?.error || 'Scan failed');
@@ -515,6 +551,16 @@ if (window.phishGuardInitialized) {
 
         } catch (error) {
             console.error('Backend communication failed:', error);
+            
+            // Show user-friendly error message
+            if (error.message.includes('timeout')) {
+                this.showNotification('Scan timed out. Please try again.', 'error');
+            } else if (error.message.includes('Extension context invalidated')) {
+                this.showNotification('Extension needs to be refreshed. Please reload the page.', 'error');
+            } else {
+                this.showNotification('Scan failed: ' + error.message, 'error');
+            }
+            
             throw error; // Propagate error to startEmailScan
         }
     }
@@ -537,6 +583,7 @@ if (window.phishGuardInitialized) {
         }
 
         console.log('PhishGuard: Injecting sidebar for the first time');
+        this.sidebarReady = false; // Reset ready flag for new sidebar
 
         const sidebarContainer = document.createElement('div');
         sidebarContainer.id = 'phishguard-sidebar';
@@ -602,29 +649,92 @@ if (window.phishGuardInitialized) {
     }
 
     sendEmailDataToSidebar() {
-        // Send current email data to sidebar
-        const sidebar = document.querySelector('#phishguard-sidebar iframe');
-        if (sidebar && sidebar.contentWindow && this.currentEmailData) {
-            console.log('PhishGuard: Sending email data to sidebar');
-            sidebar.contentWindow.postMessage({
-                type: 'START_SCAN',
-                emailData: this.currentEmailData
-            }, '*');
-        }
+        // Send current email data to sidebar with retry logic
+        const sendMessage = (attempt = 1, maxAttempts = 5) => {
+            const sidebar = document.querySelector('#phishguard-sidebar iframe');
+
+            if (!sidebar || !sidebar.contentWindow) {
+                console.warn(`PhishGuard: Sidebar iframe not ready (attempt ${attempt}/${maxAttempts})`);
+                if (attempt < maxAttempts) {
+                    setTimeout(() => sendMessage(attempt + 1, maxAttempts), 200 * attempt);
+                } else {
+                    console.error('PhishGuard: Failed to send message to sidebar - iframe not ready after max attempts');
+                }
+                return;
+            }
+
+            if (!this.currentEmailData) {
+                console.error('PhishGuard: No email data to send to sidebar');
+                return;
+            }
+
+            console.log(`PhishGuard: Sending email data to sidebar (attempt ${attempt})`);
+            try {
+                sidebar.contentWindow.postMessage({
+                    type: 'START_SCAN',
+                    emailData: this.currentEmailData
+                }, '*');
+                console.log('PhishGuard: START_SCAN message sent successfully');
+            } catch (error) {
+                console.error('PhishGuard: Error sending message to sidebar:', error);
+                if (attempt < maxAttempts) {
+                    setTimeout(() => sendMessage(attempt + 1, maxAttempts), 200 * attempt);
+                }
+            }
+        };
+
+        sendMessage();
     }
 
     displayScanResults(scanResult) {
-        // Send results to sidebar iframe
-        const sidebar = document.querySelector('#phishguard-sidebar iframe');
-        if (sidebar && sidebar.contentWindow) {
-            console.log('PhishGuard: Sending scan results to sidebar');
-            sidebar.contentWindow.postMessage({
-                type: 'SCAN_RESULTS',
-                data: scanResult
-            }, '*');
-        } else {
-            console.error('PhishGuard: Sidebar iframe not ready to receive results');
+        console.log('PhishGuard: displayScanResults called, sidebar ready:', this.sidebarReady);
+
+        // If sidebar is not ready, store results as pending
+        if (!this.sidebarReady) {
+            console.log('PhishGuard: Sidebar not ready, storing results as pending');
+            this.pendingScanResults = scanResult;
+            // Results will be sent when SIDEBAR_READY message is received
+            return;
         }
+
+        // Sidebar is ready, send results immediately
+        const sendResults = (attempt = 1, maxAttempts = 5) => {
+            const sidebar = document.querySelector('#phishguard-sidebar iframe');
+
+            if (!sidebar || !sidebar.contentWindow) {
+                console.warn(`PhishGuard: Sidebar iframe not ready for results (attempt ${attempt}/${maxAttempts})`);
+                if (attempt < maxAttempts) {
+                    setTimeout(() => sendResults(attempt + 1, maxAttempts), 200 * attempt);
+                } else {
+                    console.error('PhishGuard: Failed to send results to sidebar - iframe not ready after max attempts');
+                    // Store as pending for retry
+                    this.pendingScanResults = scanResult;
+                }
+                return;
+            }
+
+            console.log('PhishGuard: Sending scan results to sidebar:', {
+                scan_id: scanResult.scan_id,
+                final_verdict: scanResult.final_verdict || scanResult.finalVerdict,
+                has_layers: !!scanResult.layers,
+                confidence_score: scanResult.confidence_score
+            });
+
+            try {
+                sidebar.contentWindow.postMessage({
+                    type: 'SCAN_RESULTS',
+                    data: scanResult
+                }, '*');
+                console.log('PhishGuard: SCAN_RESULTS message sent successfully');
+            } catch (error) {
+                console.error('PhishGuard: Error sending results to sidebar:', error);
+                if (attempt < maxAttempts) {
+                    setTimeout(() => sendResults(attempt + 1, maxAttempts), 200 * attempt);
+                }
+            }
+        };
+
+        sendResults();
     }
     
     updateScanButtonState() {
@@ -694,4 +804,4 @@ if (window.phishGuardInitialized) {
         }, 1000);
     });
 
-} // End of initialization guard
+})(); // End of IIFE wrapper
