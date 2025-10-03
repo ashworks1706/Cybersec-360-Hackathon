@@ -5,11 +5,14 @@ class PhishGuardSidebar {
     constructor() {
         this.currentScanData = null;
         this.scanInProgress = false;
-        
+
+        // Timer IDs for simulation (so we can cancel them when real results arrive)
+        this.simulationTimers = [];
+
         this.initializeElements();
         this.setupEventListeners();
         this.setupMessageListener();
-        
+
         console.log('🛡️ PhishGuard Sidebar initialized');
     }
     
@@ -160,48 +163,55 @@ class PhishGuardSidebar {
         return icons[status] || icons.pending;
     }
     
+    clearSimulationTimers() {
+        // Cancel all pending simulation timers
+        this.simulationTimers.forEach(timerId => clearTimeout(timerId));
+        this.simulationTimers = [];
+        console.log('PhishGuard Sidebar: Cleared all simulation timers');
+    }
+
     animateScanning() {
         // Add scanning animation to layers sequentially
-        setTimeout(() => {
-            this.updateLayerStatus('layer1', 'scanning', 'Checking public databases...');
+        const timer1 = setTimeout(() => {
+            if (this.scanInProgress) {
+                this.updateLayerStatus('layer1', 'scanning', 'Checking public databases...');
+            }
         }, 500);
-        
-        setTimeout(() => {
-            this.updateLayerStatus('layer2', 'scanning', 'Running AI classification...');
+        this.simulationTimers.push(timer1);
+
+        const timer2 = setTimeout(() => {
+            if (this.scanInProgress) {
+                this.updateLayerStatus('layer2', 'scanning', 'Running AI classification...');
+            }
         }, 2000);
-        
-        setTimeout(() => {
-            this.updateLayerStatus('layer3', 'scanning', 'Detective agent analyzing...');
+        this.simulationTimers.push(timer2);
+
+        const timer3 = setTimeout(() => {
+            if (this.scanInProgress) {
+                this.updateLayerStatus('layer3', 'scanning', 'Detective agent analyzing...');
+            }
         }, 4000);
+        this.simulationTimers.push(timer3);
     }
-    
+
     updateLayerStatus(layerId, status, message = '') {
         const statusElement = document.getElementById(`${layerId}Status`);
         statusElement.className = `layer-status ${status}`;
         statusElement.innerHTML = this.getStatusIcon(status);
-        
+
         if (message) {
             const layerCard = document.getElementById(layerId);
             const messageElement = layerCard.querySelector('.layer-info p');
-            messageElement.textContent = message;
+            if (messageElement) {
+                messageElement.textContent = message;
+            }
         }
     }
-    
+
     simulateScanProgress() {
-        // Simulate Layer 1 completion
-        setTimeout(() => {
-            this.completeLayer1();
-        }, 1500);
-        
-        // Simulate Layer 2 completion
-        setTimeout(() => {
-            this.completeLayer2();
-        }, 3500);
-        
-        // Simulate Layer 3 completion
-        setTimeout(() => {
-            this.completeLayer3();
-        }, 6000);
+        // DON'T simulate - wait for real results from backend
+        // This prevents conflicts between simulation and real data
+        console.log('PhishGuard Sidebar: Waiting for real scan results from backend...');
     }
     
     completeLayer1() {
@@ -288,13 +298,19 @@ class PhishGuardSidebar {
     handleScanResults(scanData) {
         console.log('Received scan results:', scanData);
         this.currentScanData = scanData;
-        
+
+        // CRITICAL: Clear all simulation timers to prevent conflicts
+        this.clearSimulationTimers();
+
+        // Mark scan as complete
+        this.scanInProgress = false;
+
         // Process and display real scan results from backend
         if (scanData.layers) {
             this.displayLayerResults(scanData.layers);
         }
-        
-        if (scanData.finalVerdict) {
+
+        if (scanData.finalVerdict || scanData.final_verdict) {
             this.displayFinalVerdict(scanData);
         }
     }
@@ -332,27 +348,33 @@ class PhishGuardSidebar {
     
     displayFinalVerdict(scanData) {
         this.finalVerdict.style.display = 'block';
-        
-        const verdict = scanData.finalVerdict;
-        const threatLevel = scanData.threatLevel || 'medium';
-        
+
+        const verdict = scanData.finalVerdict || scanData.final_verdict || 'unknown';
+        const threatLevel = scanData.threatLevel || scanData.threat_level || 'medium';
+
+        // Update the main status title and message
+        this.statusTitle.textContent = 'Scan Complete';
+
         if (verdict === 'safe') {
             this.verdictIcon.textContent = '✅';
             this.verdictTitle.textContent = 'Email is Safe';
             this.verdictMessage.textContent = 'No threats detected';
             this.statusIndicator.className = 'status-indicator safe';
+            this.statusMessage.textContent = 'All security layers passed - email is safe';
         } else if (verdict === 'threat') {
             this.verdictIcon.textContent = '❌';
             this.verdictTitle.textContent = 'Threat Detected';
             this.verdictMessage.textContent = 'This email is malicious';
             this.statusIndicator.className = 'status-indicator danger';
+            this.statusMessage.textContent = 'Security threat detected - do not interact with this email';
         } else {
             this.verdictIcon.textContent = '⚠️';
             this.verdictTitle.textContent = 'Potential Threat';
             this.verdictMessage.textContent = 'Exercise caution with this email';
             this.statusIndicator.className = 'status-indicator warning';
+            this.statusMessage.textContent = 'Potential phishing attempt detected';
         }
-        
+
         this.actionButtons.style.display = 'flex';
         this.scanTime.textContent = new Date().toLocaleTimeString();
     }

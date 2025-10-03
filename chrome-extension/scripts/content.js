@@ -548,6 +548,9 @@ if (window.phishGuardInitialized) {
         document.body.appendChild(sidebarContainer);
         this.sidebarInjected = true;
 
+        // CRITICAL: Explicitly show the sidebar immediately after injection
+        this.showSidebar();
+
         // Wait for iframe to load before sending data
         const iframe = sidebarContainer.querySelector('iframe');
         iframe.addEventListener('load', () => {
