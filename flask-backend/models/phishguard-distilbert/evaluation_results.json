@@ -1,0 +1,19 @@
+{
+  "test_accuracy": 1.0,
+  "test_f1": 1.0,
+  "test_precision": 1.0,
+  "test_recall": 1.0,
+  "confusion_matrix": [
+    [
+      8,
+      0
+    ],
+    [
+      0,
+      7
+    ]
+  ],
+  "training_date": "2025-10-03T10:15:59.430442",
+  "base_model": "distilbert-base-uncased",
+  "dataset_size": 150
+}

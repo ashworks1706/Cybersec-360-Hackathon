@@ -4,7 +4,6 @@
 import torch
 import logging
 import re
-import os
 from typing import Dict, List, Optional
 from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
@@ -18,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Layer2ModelClassifier:
     def __init__(self):
         # Model configuration
-        self.model_name = "/home/ash/projects/Cybersec-360-hackathon/flask-backend/models/phishguard-distilbert"
+        self.model_name = "cybersectony/phishing-email-detection-distilbert_v2.1"
         self.model = None
         self.tokenizer = None
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -37,24 +36,12 @@ class Layer2ModelClassifier:
         logger.info(f"Layer 2 Model Classifier initialized on {self.device}")
     
     def load_model(self):
-        """Load the custom fine-tuned PhishGuard model"""
+        """Load the DistilBERT model and tokenizer"""
         try:
-            logger.info("Loading custom PhishGuard DistilBERT model...")
+            logger.info("Loading DistilBERT model for phishing detection...")
             
-            # Check if custom model exists
-            if os.path.exists(self.model_name):
-                # Load custom fine-tuned model
-                self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-                self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
-                logger.info("✅ Custom fine-tuned model loaded successfully")
-            else:
-                # Fallback to HuggingFace model
-                logger.warning(f"Custom model not found at {self.model_name}")
-                logger.info("📥 Falling back to HuggingFace model...")
-                fallback_model = "cybersectony/phishing-email-detection-distilbert_v2.1"
-                self.tokenizer = AutoTokenizer.from_pretrained(fallback_model)
-                self.model = AutoModelForSequenceClassification.from_pretrained(fallback_model)
-                logger.info("✅ Fallback model loaded successfully")
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
+            self.model = AutoModelForSequenceClassification.from_pretrained(self.model_name)
             
             # Move model to appropriate device
             self.model.to(self.device)
@@ -67,6 +54,7 @@ class Layer2ModelClassifier:
             # Fallback to a basic model or error handling
             self.model = None
             self.tokenizer = None
+    
     def init_training_db(self):
         """Initialize database for storing training data"""
         try:

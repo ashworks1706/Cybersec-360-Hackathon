@@ -27,3 +27,8 @@ ENV/
 # Database files
 flask-backend/cache/*.db
 flask-backend/database/*.db
+
+# Training and model files
+flask-backend/training_log_*.log
+flask-backend/logs/
+flask-backend/models/*/checkpoint-*/

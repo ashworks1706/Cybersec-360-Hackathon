@@ -79,11 +79,3 @@ config = {
     'testing': TestingConfig,
     'default': DevelopmentConfig
 }
-# Custom Model Configuration
-CUSTOM_MODEL_PATH = "/home/ash/projects/Cybersec-360-hackathon/flask-backend/models/phishguard-distilbert"
-CUSTOM_MODEL_NAME = "phishguard-distilbert-v1.0"
-USE_CUSTOM_MODEL = True
-
-# Model Performance Settings
-CUSTOM_MODEL_CONFIDENCE_THRESHOLD = 0.7  # Adjusted for fine-tuned model
-CUSTOM_MODEL_HIGH_CONFIDENCE_THRESHOLD = 0.85

@@ -1,0 +1,31 @@
+{
+  "deployment_date": "2025-10-03 10:16:58.218894",
+  "model_path": "/home/ash/projects/Cybersec-360-hackathon/flask-backend/models/phishguard-distilbert",
+  "model_name": "phishguard-distilbert-v1.0",
+  "files_updated": [
+    "layers/layer2_model.py",
+    "config.py",
+    ".env.example",
+    ".env"
+  ],
+  "status": "deployed",
+  "model_performance": {
+    "test_accuracy": 1.0,
+    "test_f1": 1.0,
+    "test_precision": 1.0,
+    "test_recall": 1.0,
+    "confusion_matrix": [
+      [
+        8,
+        0
+      ],
+      [
+        0,
+        7
+      ]
+    ],
+    "training_date": "2025-10-03T10:15:59.430442",
+    "base_model": "distilbert-base-uncased",
+    "dataset_size": 150
+  }
+}
