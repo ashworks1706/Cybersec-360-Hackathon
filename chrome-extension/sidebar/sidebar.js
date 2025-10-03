@@ -13,6 +13,7 @@ class PhishGuardSidebar {
         // Timer IDs for simulation (so we can cancel them when real results arrive)
         this.simulationTimers = [];
         this.progressTimer = null;
+        this.backendHeartbeatTimer = null;
 
         // Step definitions with progress percentages
         this.scanSteps = {
@@ -86,10 +87,6 @@ class PhishGuardSidebar {
         this.emailDate = document.getElementById('emailDate');
         this.scanTime = document.getElementById('scanTime');
         
-        // Detailed results elements
-        this.detailedResultsContainer = document.getElementById('detailedResultsContainer');
-        this.detailedResultsToggle = document.getElementById('detailedResultsToggle');
-        this.detailedResultsContent = document.getElementById('detailedResultsContent');
         
         // Close button
         this.closeBtn = document.getElementById('closeSidebar');
@@ -170,20 +167,6 @@ class PhishGuardSidebar {
             this.blockSender();
         });
 
-        // Detailed results toggle
-        if (this.detailedResultsToggle) {
-            this.detailedResultsToggle.addEventListener('click', () => {
-                this.toggleDetailedResults();
-            });
-        }
-
-        // Detailed results header click
-        const detailedResultsHeader = document.getElementById('detailedResultsHeader');
-        if (detailedResultsHeader) {
-            detailedResultsHeader.addEventListener('click', () => {
-                this.toggleDetailedResults();
-            });
-        }
     }
     
     setupMessageListener() {
@@ -243,9 +226,9 @@ class PhishGuardSidebar {
         // Reset UI to scanning state
         this.resetScanUI();
 
-        // Start the modern scanning animation
-        console.log('[PhishGuard Sidebar] Starting modern scanning animation...');
-        this.startModernScanning();
+        // Start the real-time scanning animation that waits for backend data
+        console.log('[PhishGuard Sidebar] Starting real-time scanning animation...');
+        this.startRealTimeScanning();
 
         console.log('[PhishGuard Sidebar] Scan UI initialized, waiting for results from backend...');
     }
@@ -296,10 +279,6 @@ class PhishGuardSidebar {
             riskScoreDisplay.style.display = 'none';
         }
         
-        // Hide detailed results
-        if (this.detailedResultsContainer) {
-            this.detailedResultsContainer.style.display = 'none';
-        }
         
         // Reset layers
         this.resetLayerStatus('layer1', 'pending');
@@ -322,11 +301,11 @@ class PhishGuardSidebar {
     
     getStatusIcon(status) {
         const icons = {
-            pending: '<i data-lucide="loader-2" class="status-icon pending"></i>',
+            pending: '<span class="material-icons status-icon pending">pending</span>',
             scanning: '<div class="spinner"></div>',
-            safe: '<i data-lucide="check-circle" class="status-icon safe"></i>',
-            warning: '<i data-lucide="alert-triangle" class="status-icon warning"></i>',
-            danger: '<i data-lucide="x-circle" class="status-icon danger"></i>'
+            safe: '<span class="material-icons status-icon safe">check_circle</span>',
+            warning: '<span class="material-icons status-icon warning">warning</span>',
+            danger: '<span class="material-icons status-icon danger">error</span>'
         };
         return icons[status] || icons.pending;
     }
@@ -342,56 +321,108 @@ class PhishGuardSidebar {
             this.progressTimer = null;
         }
         
+        // Stop backend heartbeat
+        this.stopBackendHeartbeat();
+        
         console.log('PhishGuard Sidebar: Cleared all simulation timers');
     }
 
-    startModernScanning() {
-        // Start with preprocessing step
+    startRealTimeScanning() {
+        // Start with preprocessing step and complete it immediately (email extraction is fast)
         this.activateStep('preprocessing');
         
-        // Simulate preprocessing
-        const timer1 = setTimeout(() => {
+        // Complete preprocessing after a short delay (email extraction)
+        setTimeout(() => {
             if (this.scanInProgress) {
                 this.completeStep('preprocessing', 'Email content extracted successfully');
                 this.activateStep('layer1');
+                
+                // Start progressive loading simulation
+                this.startProgressiveLoading();
             }
-        }, this.scanSteps.preprocessing.duration);
-        this.simulationTimers.push(timer1);
-        
-        // Simulate Layer 1
-        const timer2 = setTimeout(() => {
-            if (this.scanInProgress) {
+        }, 500); // Short delay for email extraction
+    }
+
+    startProgressiveLoading() {
+        // Simulate realistic progression through each layer
+        // Layer 1 - Database check (fastest)
+        setTimeout(() => {
+            if (this.scanInProgress && !this.resultsReceived) {
                 this.completeStep('layer1', 'Database check completed - No known threats');
                 this.activateStep('layer2');
+                this.updateProgress(40, 'Database analysis complete - Starting AI classification...');
             }
-        }, this.scanSteps.preprocessing.duration + this.scanSteps.layer1.duration);
-        this.simulationTimers.push(timer2);
-        
-        // Simulate Layer 2
-        const timer3 = setTimeout(() => {
-            if (this.scanInProgress) {
+        }, 2000); // 2 seconds
+
+        // Layer 2 - AI Classification (medium time)
+        setTimeout(() => {
+            if (this.scanInProgress && !this.resultsReceived) {
                 this.completeStep('layer2', 'AI classification completed - Proceeding to advanced analysis');
                 this.activateStep('layer3');
+                this.updateProgress(60, 'AI analysis complete - Starting advanced threat detection...');
             }
-        }, this.scanSteps.preprocessing.duration + this.scanSteps.layer1.duration + this.scanSteps.layer2.duration);
-        this.simulationTimers.push(timer3);
-        
-        // Simulate Layer 3
-        const timer4 = setTimeout(() => {
-            if (this.scanInProgress) {
+        }, 8000); // 8 seconds total
+
+        // Layer 3 - Detective Analysis (longest)
+        setTimeout(() => {
+            if (this.scanInProgress && !this.resultsReceived) {
                 this.completeStep('layer3', 'Advanced analysis completed');
                 this.activateStep('finalization');
+                this.updateProgress(80, 'Advanced analysis complete - Finalizing assessment...');
             }
-        }, this.scanSteps.preprocessing.duration + this.scanSteps.layer1.duration + this.scanSteps.layer2.duration + this.scanSteps.layer3.duration);
-        this.simulationTimers.push(timer4);
+        }, 20000); // 20 seconds total
         
         // Finalization
-        const timer5 = setTimeout(() => {
-            if (this.scanInProgress) {
+        setTimeout(() => {
+            if (this.scanInProgress && !this.resultsReceived) {
                 this.completeStep('finalization', 'Security assessment complete');
+                this.updateProgress(90, 'Assessment complete - Preparing final results...');
             }
-        }, this.scanSteps.preprocessing.duration + this.scanSteps.layer1.duration + this.scanSteps.layer2.duration + this.scanSteps.layer3.duration + this.scanSteps.finalization.duration);
-        this.simulationTimers.push(timer5);
+        }, 25000); // 25 seconds total
+
+        // Start backend heartbeat for longer waits
+        setTimeout(() => {
+            if (this.scanInProgress && !this.resultsReceived) {
+                this.startBackendHeartbeat();
+            }
+        }, 10000); // Start heartbeat after 10 seconds if still waiting
+    }
+
+    startBackendHeartbeat() {
+        // Show periodic updates to indicate system is still working
+        let heartbeatCount = 0;
+        const heartbeatMessages = [
+            'Backend is analyzing email content - this may take 1-2 minutes for complex analysis',
+            'Still analyzing - checking for phishing patterns and social engineering tactics',
+            'Deep analysis in progress - examining email structure and content',
+            'Advanced threat detection running - analyzing sender reputation and content patterns',
+            'Final analysis phase - generating comprehensive security assessment'
+        ];
+
+        this.backendHeartbeatTimer = setInterval(() => {
+            if (!this.scanInProgress || this.resultsReceived) {
+                this.stopBackendHeartbeat();
+                return;
+            }
+
+            heartbeatCount++;
+            const messageIndex = Math.min(heartbeatCount - 1, heartbeatMessages.length - 1);
+            this.statusMessage.textContent = heartbeatMessages[messageIndex];
+            
+            // Slightly increase progress to show activity (but not too much)
+            const currentProgress = 30 + (heartbeatCount * 5);
+            this.updateProgress(Math.min(currentProgress, 85), 'Backend analysis in progress...');
+            
+            console.log(`[PhishGuard] Backend heartbeat ${heartbeatCount}: Still waiting for results...`);
+        }, 10000); // Update every 10 seconds
+    }
+
+    stopBackendHeartbeat() {
+        if (this.backendHeartbeatTimer) {
+            clearInterval(this.backendHeartbeatTimer);
+            this.backendHeartbeatTimer = null;
+            console.log('[PhishGuard] Backend heartbeat stopped');
+        }
     }
 
     updateLayerStatus(layerId, status, message = '') {
@@ -399,10 +430,7 @@ class PhishGuardSidebar {
         statusElement.className = `layer-status ${status}`;
         statusElement.innerHTML = this.getStatusIcon(status);
 
-        // Reinitialize Lucide icons for the new icon
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
+        // Icons are already Material Icons, no need to reinitialize
 
         if (message) {
             const layerCard = document.getElementById(layerId);
@@ -572,11 +600,11 @@ class PhishGuardSidebar {
         if (!riskScoreDisplay || !overallRiskScore || !riskScoreDescription) return;
 
         // Use ONLY backend's confidence_score - NO fallbacks, NO hardcoded values
-        let riskScore = 0;
-        let riskLevel = 'low';
-        let riskDescription = 'Low Risk';
+        let riskScore = '-';
+        let riskLevel = 'loading';
+        let riskDescription = 'Loading...';
 
-        if (this.currentScanData) {
+        if (this.currentScanData && this.currentScanData.confidenceScore !== undefined) {
             console.log('[PhishGuard] ===== RISK SCORE CALCULATION =====');
             console.log('[PhishGuard] Backend data:', {
                 confidenceScore: this.currentScanData.confidenceScore,
@@ -625,212 +653,187 @@ class PhishGuardSidebar {
         // Set risk level class
         riskScoreDisplay.className = `risk-score-display ${riskLevel}-risk`;
         
-        // Show with animation
-        riskScoreDisplay.style.display = 'block';
-        
-        // Show detailed results
-        if (this.detailedResultsContainer) {
-            this.detailedResultsContainer.style.display = 'block';
-            this.populateDetailedResults();
+        // Only show risk score display if we have real data
+        if (riskScore !== '-' && riskDescription !== 'Loading...') {
+            riskScoreDisplay.style.display = 'block';
         }
+        
+        // Step details are already shown immediately when each layer completes
         
         console.log(`[PhishGuard] Risk score displayed: ${riskScore} (${riskDescription})`);
     }
     
-    toggleDetailedResults() {
-        if (!this.detailedResultsContent || !this.detailedResultsToggle) return;
-        
-        const isVisible = this.detailedResultsContent.style.display === 'block';
-        
-        if (isVisible) {
-            this.detailedResultsContent.style.display = 'none';
-            this.detailedResultsToggle.classList.remove('expanded');
-            this.detailedResultsToggle.querySelector('.material-icons').textContent = 'expand_more';
-        } else {
-            this.detailedResultsContent.style.display = 'block';
-            this.detailedResultsToggle.classList.add('expanded');
-            this.detailedResultsToggle.querySelector('.material-icons').textContent = 'expand_less';
-        }
-        
-        console.log(`[PhishGuard] Detailed results ${isVisible ? 'collapsed' : 'expanded'}`);
-    }
     
-    populateDetailedResults() {
+    populateStepDetails() {
         if (!this.currentScanData || !this.currentScanData.layers) {
-            console.warn('[PhishGuard] No scan data available for detailed results');
+            console.warn('[PhishGuard] No scan data available for step details');
             return;
         }
 
-        console.log('[PhishGuard] Populating detailed results with data:', this.currentScanData.layers);
+        console.log('[PhishGuard] Populating comprehensive step details with data:', this.currentScanData.layers);
 
-        // Layer 1 Details
+        // Layer 1 Details - Public Database Check
         if (this.currentScanData.layers.layer1) {
             const layer1 = this.currentScanData.layers.layer1;
             
-            // Update status
-            const status1 = document.getElementById('detailed-layer1Status');
-            if (status1) {
-                const icon = status1.querySelector('.material-icons');
-                if (layer1.status === 'clean') {
-                    icon.textContent = 'check_circle';
-                    icon.className = 'material-icons status-icon safe';
-                } else if (layer1.status === 'threat') {
-                    icon.textContent = 'warning';
-                    icon.className = 'material-icons status-icon danger';
-                }
-            }
+            // Update step details
+            const statusElement = document.getElementById('step-layer1-status');
+            const confidenceElement = document.getElementById('step-layer1-confidence');
+            const dbCountElement = document.getElementById('step-layer1-db-count');
+            const detailsElement = document.getElementById('step-layer1-details');
             
-            // Update details
-            document.getElementById('detailed-layer1DbCount').textContent = layer1.databases_checked || 0;
-            document.getElementById('detailed-layer1Confidence').textContent = Math.round((layer1.confidence || 0) * 100) + '%';
-            
-            // Show threats if any
-            if (layer1.threat_indicators && layer1.threat_indicators.length > 0) {
-                const threatsDiv = document.getElementById('detailed-layer1Threats');
-                const indicatorsDiv = document.getElementById('detailed-layer1ThreatIndicators');
-                if (threatsDiv && indicatorsDiv) {
-                    threatsDiv.style.display = 'block';
-                    indicatorsDiv.innerHTML = layer1.threat_indicators.map(threat => 
-                        `<span class="threat-indicator">${threat}</span>`
-                    ).join('');
-                }
+            if (statusElement) {
+                statusElement.textContent = layer1.status || 'N/A';
             }
-        } else {
-            // Layer 1 not executed (shouldn't happen, but handle it)
-            const status1 = document.getElementById('detailed-layer1Status');
-            if (status1) {
-                const icon = status1.querySelector('.material-icons');
-                icon.textContent = 'info';
-                icon.className = 'material-icons status-icon';
+            if (confidenceElement) {
+                confidenceElement.textContent = layer1.confidence ? Math.round(layer1.confidence * 100) + '%' : 'N/A';
             }
-            const detailedLayer1DbCount = document.getElementById('detailed-layer1DbCount');
-            const detailedLayer1Confidence = document.getElementById('detailed-layer1Confidence');
-            if (detailedLayer1DbCount) detailedLayer1DbCount.textContent = 'N/A';
-            if (detailedLayer1Confidence) detailedLayer1Confidence.textContent = 'N/A';
+            if (dbCountElement) {
+                dbCountElement.textContent = layer1.databases_checked || 0;
+            }
+            if (detailsElement) {
+                detailsElement.style.display = 'block';
+            }
         }
 
-        // Layer 2 Details
+        // Layer 2 Details - AI Classification
         if (this.currentScanData.layers.layer2) {
             const layer2 = this.currentScanData.layers.layer2;
             
-            // Update status
-            const status2 = document.getElementById('detailed-layer2Status');
-            if (status2) {
-                const icon = status2.querySelector('.material-icons');
-                if (layer2.status === 'clean' || layer2.status === 'benign') {
-                    icon.textContent = 'check_circle';
-                    icon.className = 'material-icons status-icon safe';
-                } else if (layer2.status === 'threat' || layer2.status === 'malicious') {
-                    icon.textContent = 'warning';
-                    icon.className = 'material-icons status-icon danger';
-                } else {
-                    icon.textContent = 'warning';
-                    icon.className = 'material-icons status-icon warning';
-                }
-            }
+            // Update step details
+            const statusElement = document.getElementById('step-layer2-status');
+            const confidenceElement = document.getElementById('step-layer2-confidence');
+            const detailsElement = document.getElementById('step-layer2-details');
             
-            // Update details
-            document.getElementById('detailed-layer2Confidence').textContent = Math.round((layer2.confidence || 0) * 100) + '%';
-            document.getElementById('detailed-layer2Classification').textContent = layer2.status || 'Unknown';
-            
-            // Show risk indicators if any
-            if (layer2.risk_indicators && layer2.risk_indicators.length > 0) {
-                const indicatorsDiv = document.getElementById('detailed-layer2Indicators');
-                const riskIndicatorsDiv = document.getElementById('detailed-layer2RiskIndicators');
-                if (indicatorsDiv && riskIndicatorsDiv) {
-                    indicatorsDiv.style.display = 'block';
-                    riskIndicatorsDiv.innerHTML = layer2.risk_indicators.map(indicator => 
-                        `<span class="threat-indicator">${indicator}</span>`
-                    ).join('');
-                }
+            if (statusElement) {
+                statusElement.textContent = layer2.status || 'N/A';
             }
-        } else {
-            // Layer 2 not executed
-            const status2 = document.getElementById('detailed-layer2Status');
-            if (status2) {
-                const icon = status2.querySelector('.material-icons');
-                icon.textContent = 'info';
-                icon.className = 'material-icons status-icon';
+            if (confidenceElement) {
+                confidenceElement.textContent = layer2.confidence ? Math.round(layer2.confidence * 100) + '%' : 'N/A';
             }
-            const detailedLayer2Confidence = document.getElementById('detailed-layer2Confidence');
-            const detailedLayer2Classification = document.getElementById('detailed-layer2Classification');
-            if (detailedLayer2Confidence) detailedLayer2Confidence.textContent = 'N/A';
-            if (detailedLayer2Classification) detailedLayer2Classification.textContent = 'Not executed';
+            if (detailsElement) {
+                detailsElement.style.display = 'block';
+            }
         }
 
-        // Layer 3 Details
+        // Layer 3 Details - Detective Agent (Comprehensive)
         if (this.currentScanData.layers.layer3) {
             const layer3 = this.currentScanData.layers.layer3;
             
-            // Update status
-            const status3 = document.getElementById('detailed-layer3Status');
-            if (status3) {
-                const icon = status3.querySelector('.material-icons');
-                if (layer3.verdict === 'safe') {
-                    icon.textContent = 'check_circle';
-                    icon.className = 'material-icons status-icon safe';
-                } else if (layer3.verdict === 'threat') {
-                    icon.textContent = 'warning';
-                    icon.className = 'material-icons status-icon danger';
+            // Update all Layer 3 step details
+            const verdictElement = document.getElementById('step-layer3-verdict');
+            const threatLevelElement = document.getElementById('step-layer3-threat-level');
+            const confidenceElement = document.getElementById('step-layer3-confidence');
+            const socialScoreElement = document.getElementById('step-layer3-social-score');
+            const impersonationRiskElement = document.getElementById('step-layer3-impersonation-risk');
+            const contextElement = document.getElementById('step-layer3-context');
+            const detailedAnalysisElement = document.getElementById('step-layer3-detailed-analysis');
+            const recommendedActionElement = document.getElementById('step-layer3-recommended-action');
+            const recommendedActionContentElement = document.getElementById('step-layer3-recommended-action-content');
+            const tacticsElement = document.getElementById('step-layer3-tactics');
+            const tacticsListElement = document.getElementById('step-layer3-tactics-list');
+            const detailsElement = document.getElementById('step-layer3-details');
+            
+            // Basic information
+            if (verdictElement) {
+                verdictElement.textContent = layer3.verdict || 'N/A';
+            }
+            if (threatLevelElement) {
+                threatLevelElement.textContent = layer3.threat_level || 'N/A';
+            }
+            if (confidenceElement) {
+                confidenceElement.textContent = layer3.confidence ? Math.round(layer3.confidence * 100) + '%' : 'N/A';
+            }
+            if (socialScoreElement) {
+                socialScoreElement.textContent = (layer3.social_engineering_score || 0) + '%';
+                
+                // Update color based on score
+                const score = layer3.social_engineering_score || 0;
+                if (score >= 70) {
+                    socialScoreElement.style.color = '#dc2626'; // Red
+                    socialScoreElement.style.fontWeight = 'bold';
+                } else if (score >= 40) {
+                    socialScoreElement.style.color = '#f59e0b'; // Orange
+                    socialScoreElement.style.fontWeight = 'bold';
                 } else {
-                    icon.textContent = 'warning';
-                    icon.className = 'material-icons status-icon warning';
+                    socialScoreElement.style.color = '#10b981'; // Green
                 }
             }
-            
-            // Update details
-            document.getElementById('detailed-layer3SocialScore').textContent = Math.round(layer3.social_engineering_score || 0) + '%';
-            document.getElementById('detailed-layer3Context').textContent = layer3.personal_context || 'None detected';
-            document.getElementById('detailed-layer3TacticsCount').textContent = layer3.tactics_identified ? layer3.tactics_identified.length : 0;
-            
-            // Show detailed analysis if available
-            if (layer3.detailed_analysis || layer3.tactics_identified) {
-                const assessmentDiv = document.getElementById('detailed-layer3Assessment');
-                const assessmentContentDiv = document.getElementById('detailed-layer3AssessmentContent');
-                if (assessmentDiv && assessmentContentDiv) {
-                    assessmentDiv.style.display = 'block';
-                    
-                    let analysisHTML = '';
+            if (impersonationRiskElement) {
+                impersonationRiskElement.textContent = layer3.impersonation_risk || 'N/A';
+            }
+            if (contextElement) {
+                contextElement.textContent = layer3.personal_context || 'N/A';
+            }
+
+            // Detailed Analysis
+            if (detailedAnalysisElement && layer3.detailed_analysis) {
+                const formattedAnalysis = this.formatDetailedAnalysis(layer3.detailed_analysis);
+                detailedAnalysisElement.innerHTML = formattedAnalysis;
+            }
+
+            // Recommended Action
+            if (layer3.recommended_action) {
+                if (recommendedActionElement) {
+                    recommendedActionElement.style.display = 'block';
+                }
+                if (recommendedActionContentElement) {
+                    recommendedActionContentElement.textContent = layer3.recommended_action;
+                }
+            }
+
+            // Tactics Identified
                     if (layer3.tactics_identified && layer3.tactics_identified.length > 0) {
-                        analysisHTML += `<div style="margin-bottom: 12px; padding: 8px; background: #fffbeb; border-left: 4px solid #d97706; border-radius: 4px;">
-                            <strong>${layer3.tactics_identified.length} Social Engineering Tactics Detected</strong>
-                        </div>`;
+                if (tacticsElement) {
+                    tacticsElement.style.display = 'block';
+                }
+                if (tacticsListElement) {
+                    let tacticsHTML = '';
+                    layer3.tactics_identified.forEach((tactic, index) => {
+                        // Skip section headers that are just formatting artifacts
+                        if (tactic.trim().endsWith(':**') || tactic.trim() === '4. Threat Assessment:**') {
+                            return;
+                        }
                         
-                        analysisHTML += '<div style="max-height: 200px; overflow-y: auto;">';
-                        layer3.tactics_identified.forEach(tactic => {
-                            if (!tactic.trim().endsWith(':**') && tactic.trim() !== '4. Threat Assessment:**') {
-                                analysisHTML += `<div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
-                                    ${tactic.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
-                                </div>`;
-                            }
-                        });
-                        analysisHTML += '</div>';
-                    } else if (layer3.detailed_analysis) {
-                        analysisHTML = `<div style="padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 12px;">
-                            ${layer3.detailed_analysis.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}
-                        </div>`;
-                    }
-                    
-                    assessmentContentDiv.innerHTML = analysisHTML;
+                        tacticsHTML += `
+                            <div class="step-tactic-item">
+                                <strong>${index + 1}.</strong>
+                                <span style="margin-left: 6px;">${tactic}</span>
+                            </div>
+                        `;
+                    });
+                    tacticsListElement.innerHTML = tacticsHTML;
                 }
             }
-        } else {
-            // Layer 3 not executed
-            const status3 = document.getElementById('detailed-layer3Status');
-            if (status3) {
-                const icon = status3.querySelector('.material-icons');
-                icon.textContent = 'info';
-                icon.className = 'material-icons status-icon';
+            
+            if (detailsElement) {
+                detailsElement.style.display = 'block';
             }
-            const detailedLayer3SocialScore = document.getElementById('detailed-layer3SocialScore');
-            const detailedLayer3Context = document.getElementById('detailed-layer3Context');
-            const detailedLayer3TacticsCount = document.getElementById('detailed-layer3TacticsCount');
-            if (detailedLayer3SocialScore) detailedLayer3SocialScore.textContent = 'N/A';
-            if (detailedLayer3Context) detailedLayer3Context.textContent = 'Not executed';
-            if (detailedLayer3TacticsCount) detailedLayer3TacticsCount.textContent = '0';
         }
 
-        console.log('[PhishGuard] Detailed results populated successfully');
+        console.log('[PhishGuard] Comprehensive step details populated successfully');
+    }
+
+    formatDetailedAnalysis(text) {
+        // Convert markdown **bold** to HTML
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Split into sentences and group them into readable paragraphs
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+        // Group sentences into paragraphs (2-3 sentences each)
+        const paragraphs = [];
+        for (let i = 0; i < sentences.length; i += 2) {
+            const paragraph = sentences.slice(i, i + 2).join(' ').trim();
+            if (paragraph) {
+                paragraphs.push(paragraph);
+            }
+        }
+
+        // Format as HTML paragraphs
+        return paragraphs.map(p =>
+            `<p style="margin-bottom: 8px; line-height: 1.5; font-size: 11px;">${p}</p>`
+        ).join('');
     }
 
     simulateScanProgress() {
@@ -937,6 +940,9 @@ class PhishGuardSidebar {
         // CRITICAL: Clear all simulation timers IMMEDIATELY to prevent conflicts
         console.log('[PhishGuard Sidebar] Clearing simulation timers...');
         this.clearSimulationTimers();
+        
+        // Stop backend heartbeat since we have results
+        this.stopBackendHeartbeat();
 
         // Mark scan as complete
         this.scanInProgress = false;
@@ -955,13 +961,19 @@ class PhishGuardSidebar {
         // Update progress to 100% (scan is complete)
         this.updateProgress(100, 'Scan completed');
 
-        // Process real scan results from backend and update step UI
+        // Process real scan results from backend and update step UI in real-time
         this.updateStepsFromBackendData(normalizedData);
 
-        // Display layer results with real data
+        // Update step descriptions with real backend messages
+        this.updateStepDescriptionsWithRealData(normalizedData);
+
+        // Display layer results with real data immediately
         if (normalizedData.layers) {
             console.log('[PhishGuard Sidebar] Displaying real layer results from backend...');
             this.displayLayerResultsWithModernUI(normalizedData.layers);
+            
+            // Force show all layer details since they should be visible now
+            this.forceShowAllLayerDetails(normalizedData.layers);
         } else {
             console.warn('[PhishGuard Sidebar] WARNING: No layers found in scan data!');
         }
@@ -998,6 +1010,8 @@ class PhishGuardSidebar {
                 return;
             } else {
                 this.completeStep('layer1', 'No known threats found in databases');
+                // Show Layer 1 details immediately
+                this.showLayerDetails('layer1', layer1);
             }
         }
 
@@ -1008,14 +1022,20 @@ class PhishGuardSidebar {
                 this.completeStep('layer2', 'High confidence: Email appears legitimate');
                 this.skipStep('layer3', 'Not needed - High confidence from Layer 2');
                 this.completeStep('finalization', 'Analysis complete - Email verified as safe');
+                // Show Layer 2 details immediately
+                this.showLayerDetails('layer2', layer2);
                 return;
             } else if (layer2.status === 'threat' || layer2.status === 'malicious') {
                 this.threatDetectedStep('layer2', `AI detected malicious patterns`);
                 this.skipStep('layer3', 'Not executed - Threat found in Layer 2');
                 this.threatDetectedStep('finalization', 'Analysis terminated - Threat confirmed');
+                // Show Layer 2 details immediately
+                this.showLayerDetails('layer2', layer2);
                 return;
             } else {
-                this.completeStep('layer2', 'Proceeding to advanced analysis');
+                this.completeStep('layer2', 'Proceeding to advanced analysis - Suspicious patterns detected');
+                // Show Layer 2 details immediately
+                this.showLayerDetails('layer2', layer2);
             }
         } else {
             // Layer 2 not executed
@@ -1025,15 +1045,23 @@ class PhishGuardSidebar {
         // Layer 3
         if (layers.layer3) {
             const layer3 = layers.layer3;
+            const tacticsCount = layer3.tactics_identified ? layer3.tactics_identified.length : 0;
+            
             if (layer3.verdict === 'threat' || layer3.threat_level === 'high') {
-                this.threatDetectedStep('layer3', `Advanced threat detected`);
+                this.threatDetectedStep('layer3', `Advanced threat detected: ${tacticsCount} social engineering tactics identified`);
                 this.threatDetectedStep('finalization', 'Analysis complete - Threat confirmed');
+                // Show Layer 3 details immediately
+                this.showLayerDetails('layer3', layer3);
             } else if (layer3.verdict === 'suspicious') {
-                this.completeStep('layer3', 'Suspicious patterns detected');
+                this.completeStep('layer3', `Suspicious patterns detected: ${tacticsCount} tactics identified`);
                 this.completeStep('finalization', 'Analysis complete - Exercise caution');
+                // Show Layer 3 details immediately
+                this.showLayerDetails('layer3', layer3);
             } else {
                 this.completeStep('layer3', 'Advanced analysis complete - No threats detected');
                 this.completeStep('finalization', 'Security assessment complete');
+                // Show Layer 3 details immediately
+                this.showLayerDetails('layer3', layer3);
             }
         } else {
             // Layer 3 not executed
@@ -1042,6 +1070,197 @@ class PhishGuardSidebar {
         }
 
         console.log('[PhishGuard Sidebar] Steps updated from backend data');
+    }
+
+    showLayerDetails(layerId, layerData) {
+        // Immediately show the details for the specific layer
+        const detailsElement = document.getElementById(`step-${layerId}-details`);
+        if (!detailsElement) return;
+
+        console.log(`[PhishGuard] Showing details for ${layerId}:`, layerData);
+
+        if (layerId === 'layer1') {
+            // Update Layer 1 details
+            const statusElement = document.getElementById('step-layer1-status');
+            const confidenceElement = document.getElementById('step-layer1-confidence');
+            const dbCountElement = document.getElementById('step-layer1-db-count');
+            
+            if (statusElement) statusElement.textContent = layerData.status || 'N/A';
+            if (confidenceElement) confidenceElement.textContent = layerData.confidence ? Math.round(layerData.confidence * 100) + '%' : 'N/A';
+            if (dbCountElement) dbCountElement.textContent = layerData.databases_checked || 0;
+            
+            detailsElement.style.display = 'block';
+            
+        } else if (layerId === 'layer2') {
+            // Update Layer 2 details
+            const statusElement = document.getElementById('step-layer2-status');
+            const confidenceElement = document.getElementById('step-layer2-confidence');
+            
+            if (statusElement) statusElement.textContent = layerData.status || 'N/A';
+            if (confidenceElement) confidenceElement.textContent = layerData.confidence ? Math.round(layerData.confidence * 100) + '%' : 'N/A';
+            
+            detailsElement.style.display = 'block';
+            
+        } else if (layerId === 'layer3') {
+            // Update Layer 3 details with all comprehensive information
+            const verdictElement = document.getElementById('step-layer3-verdict');
+            const threatLevelElement = document.getElementById('step-layer3-threat-level');
+            const confidenceElement = document.getElementById('step-layer3-confidence');
+            const socialScoreElement = document.getElementById('step-layer3-social-score');
+            const impersonationRiskElement = document.getElementById('step-layer3-impersonation-risk');
+            const contextElement = document.getElementById('step-layer3-context');
+            const detailedAnalysisElement = document.getElementById('step-layer3-detailed-analysis');
+            const recommendedActionElement = document.getElementById('step-layer3-recommended-action');
+            const recommendedActionContentElement = document.getElementById('step-layer3-recommended-action-content');
+            const tacticsElement = document.getElementById('step-layer3-tactics');
+            const tacticsListElement = document.getElementById('step-layer3-tactics-list');
+            
+            // Basic information
+            if (verdictElement) verdictElement.textContent = layerData.verdict || 'N/A';
+            if (threatLevelElement) threatLevelElement.textContent = layerData.threat_level || 'N/A';
+            if (confidenceElement) confidenceElement.textContent = layerData.confidence ? Math.round(layerData.confidence * 100) + '%' : 'N/A';
+            if (socialScoreElement) {
+                socialScoreElement.textContent = (layerData.social_engineering_score || 0) + '%';
+                
+                // Update color based on score
+                const score = layerData.social_engineering_score || 0;
+                if (score >= 70) {
+                    socialScoreElement.style.color = '#dc2626'; // Red
+                    socialScoreElement.style.fontWeight = 'bold';
+                } else if (score >= 40) {
+                    socialScoreElement.style.color = '#f59e0b'; // Orange
+                    socialScoreElement.style.fontWeight = 'bold';
+                } else {
+                    socialScoreElement.style.color = '#10b981'; // Green
+                }
+            }
+            if (impersonationRiskElement) impersonationRiskElement.textContent = layerData.impersonation_risk || 'N/A';
+            if (contextElement) contextElement.textContent = layerData.personal_context || 'N/A';
+
+            // Detailed Analysis
+            if (detailedAnalysisElement && layerData.detailed_analysis) {
+                const formattedAnalysis = this.formatDetailedAnalysis(layerData.detailed_analysis);
+                detailedAnalysisElement.innerHTML = formattedAnalysis;
+            }
+
+            // Recommended Action
+            if (layerData.recommended_action) {
+                if (recommendedActionElement) recommendedActionElement.style.display = 'block';
+                if (recommendedActionContentElement) recommendedActionContentElement.textContent = layerData.recommended_action;
+            }
+
+            // Tactics Identified
+            if (layerData.tactics_identified && layerData.tactics_identified.length > 0) {
+                if (tacticsElement) tacticsElement.style.display = 'block';
+                if (tacticsListElement) {
+                    let tacticsHTML = '';
+                    layerData.tactics_identified.forEach((tactic, index) => {
+                        // Skip section headers that are just formatting artifacts
+                        if (tactic.trim().endsWith(':**') || tactic.trim() === '4. Threat Assessment:**') {
+                            return;
+                        }
+                        
+                        tacticsHTML += `
+                            <div class="step-tactic-item">
+                                <strong>${index + 1}.</strong>
+                                <span style="margin-left: 6px;">${tactic}</span>
+                            </div>
+                        `;
+                    });
+                    tacticsListElement.innerHTML = tacticsHTML;
+                }
+            }
+            
+            detailsElement.style.display = 'block';
+        }
+        
+        console.log(`[PhishGuard] Layer ${layerId} details displayed successfully`);
+    }
+
+    forceShowAllLayerDetails(layers) {
+        // Force show all layer details regardless of the step completion flow
+        console.log('[PhishGuard] Force showing all layer details:', layers);
+        
+        // Show Layer 1 details
+        if (layers.layer1) {
+            console.log('[PhishGuard] Force showing Layer 1 details');
+            this.showLayerDetails('layer1', layers.layer1);
+        }
+        
+        // Show Layer 2 details
+        if (layers.layer2) {
+            console.log('[PhishGuard] Force showing Layer 2 details');
+            this.showLayerDetails('layer2', layers.layer2);
+        }
+        
+        // Show Layer 3 details
+        if (layers.layer3) {
+            console.log('[PhishGuard] Force showing Layer 3 details');
+            this.showLayerDetails('layer3', layers.layer3);
+        }
+        
+        console.log('[PhishGuard] All layer details force displayed');
+    }
+
+    updateStepDescriptionsWithRealData(scanData) {
+        // Update step descriptions with real backend analysis results
+        const layers = scanData.layers || {};
+        
+        // Update Layer 1 description with real data
+        if (layers.layer1) {
+            const layer1 = layers.layer1;
+            const layer1Step = document.getElementById('step-layer1');
+            if (layer1Step) {
+                const description = layer1Step.querySelector('.step-description');
+                if (description) {
+                    if (layer1.status === 'threat') {
+                        description.textContent = 'Threat detected: Known malicious patterns';
+                    } else {
+                        description.textContent = 'No known threats found in databases';
+                    }
+                }
+            }
+        }
+        
+        // Update Layer 2 description with real data
+        if (layers.layer2) {
+            const layer2 = layers.layer2;
+            const layer2Step = document.getElementById('step-layer2');
+            if (layer2Step) {
+                const description = layer2Step.querySelector('.step-description');
+                if (description) {
+                    if (layer2.status === 'threat' || layer2.status === 'malicious') {
+                        description.textContent = 'AI detected malicious patterns';
+                    } else if (layer2.status === 'clean' && layer2.confidence > 0.8) {
+                        description.textContent = 'High confidence: Email appears legitimate';
+                    } else {
+                        description.textContent = 'Proceeding to advanced analysis - Suspicious patterns detected';
+                    }
+                }
+            }
+        }
+        
+        // Update Layer 3 description with real data
+        if (layers.layer3) {
+            const layer3 = layers.layer3;
+            const layer3Step = document.getElementById('step-layer3');
+            if (layer3Step) {
+                const description = layer3Step.querySelector('.step-description');
+                if (description) {
+                    const tacticsCount = layer3.tactics_identified ? layer3.tactics_identified.length : 0;
+                    
+                    if (layer3.verdict === 'threat' || layer3.threat_level === 'high') {
+                        description.textContent = `Advanced threat detected: ${tacticsCount} social engineering tactics identified`;
+                    } else if (layer3.verdict === 'suspicious') {
+                        description.textContent = `Suspicious patterns detected: ${tacticsCount} tactics identified`;
+                    } else {
+                        description.textContent = 'Advanced analysis complete - No threats detected';
+                    }
+                }
+            }
+        }
+        
+        console.log('[PhishGuard] Step descriptions updated with real backend data');
     }
 
     normalizeScanData(scanData) {
@@ -1080,6 +1299,15 @@ class PhishGuardSidebar {
             layerResults.style.display = 'none';
             console.log('✅ [DEBUG] Hidden old layer cards');
         }
+
+        // Hide step details initially
+        const stepDetails = ['step-layer1-details', 'step-layer2-details', 'step-layer3-details'];
+        stepDetails.forEach(detailId => {
+            const element = document.getElementById(detailId);
+            if (element) {
+                element.style.display = 'none';
+            }
+        });
 
         // Process Layer 1
         if (layers.layer1) {
@@ -1393,31 +1621,26 @@ class PhishGuardSidebar {
         const verdictIconWrapper = document.getElementById('verdictIconWrapper');
 
         if (verdict === 'safe') {
-            this.verdictIcon.setAttribute('data-lucide', 'shield-check');
+            this.verdictIcon.textContent = 'shield';
             this.verdictTitle.textContent = 'Email is Safe';
             this.verdictMessage.textContent = 'No threats detected';
             this.statusIndicator.className = 'status-indicator safe';
             this.statusMessage.textContent = 'All security layers passed - email is safe';
             if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper safe';
         } else if (verdict === 'threat') {
-            this.verdictIcon.setAttribute('data-lucide', 'shield-alert');
+            this.verdictIcon.textContent = 'warning';
             this.verdictTitle.textContent = 'Threat Detected';
             this.verdictMessage.textContent = 'This email is malicious';
             this.statusIndicator.className = 'status-indicator danger';
             this.statusMessage.textContent = 'Security threat detected - do not interact with this email';
             if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper danger';
         } else {
-            this.verdictIcon.setAttribute('data-lucide', 'shield-alert');
+            this.verdictIcon.textContent = 'warning';
             this.verdictTitle.textContent = 'Potential Threat';
             this.verdictMessage.textContent = 'Exercise caution with this email';
             this.statusIndicator.className = 'status-indicator warning';
             this.statusMessage.textContent = 'Potential phishing attempt detected';
             if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper warning';
-        }
-
-        // Reinitialize Lucide icons
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
         }
 
         // Use ONLY backend's confidence_score - NO fallbacks, NO hardcoded values

@@ -525,7 +525,7 @@
 
             // Add timeout to prevent hanging requests
             const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => reject(new Error('Scan request timeout')), 30000); // 30 second timeout
+                setTimeout(() => reject(new Error('Scan request timeout')), 120000); // 2 minute timeout for complex analysis
             });
 
             // Send scan request to background script (which will call Flask API)

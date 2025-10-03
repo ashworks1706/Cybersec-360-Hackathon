@@ -64,11 +64,26 @@
                     
                     <div class="scan-step" id="step-layer1">
                         <div class="step-icon">
-                            <span class="material-icons">database</span>
+                            <span class="material-icons">shield</span>
                         </div>
                         <div class="step-content">
                             <div class="step-title">Layer 1: Database Check</div>
                             <div class="step-description">Checking against known spam databases...</div>
+                            <!-- Layer 1 Details -->
+                            <div class="step-details" id="step-layer1-details" style="display: none;">
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Status</span>
+                                    <span class="step-detail-value" id="step-layer1-status">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Confidence</span>
+                                    <span class="step-detail-value" id="step-layer1-confidence">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Databases Checked</span>
+                                    <span class="step-detail-value" id="step-layer1-db-count">0</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="step-status">
                             <span class="material-icons step-icon-pending">pending</span>
@@ -82,6 +97,17 @@
                         <div class="step-content">
                             <div class="step-title">Layer 2: AI Classification</div>
                             <div class="step-description">Running DistilBERT model analysis...</div>
+                            <!-- Layer 2 Details -->
+                            <div class="step-details" id="step-layer2-details" style="display: none;">
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Status</span>
+                                    <span class="step-detail-value" id="step-layer2-status">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Confidence</span>
+                                    <span class="step-detail-value" id="step-layer2-confidence">-</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="step-status">
                             <span class="material-icons step-icon-pending">pending</span>
@@ -95,6 +121,45 @@
                         <div class="step-content">
                             <div class="step-title">Layer 3: Detective Analysis</div>
                             <div class="step-description">Advanced social engineering detection...</div>
+                            <!-- Layer 3 Details -->
+                            <div class="step-details" id="step-layer3-details" style="display: none;">
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Verdict</span>
+                                    <span class="step-detail-value" id="step-layer3-verdict">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Threat Level</span>
+                                    <span class="step-detail-value" id="step-layer3-threat-level">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Confidence</span>
+                                    <span class="step-detail-value" id="step-layer3-confidence">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Social Engineering Score</span>
+                                    <span class="step-detail-value" id="step-layer3-social-score">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Impersonation Risk</span>
+                                    <span class="step-detail-value" id="step-layer3-impersonation-risk">-</span>
+                                </div>
+                                <div class="step-detail-row">
+                                    <span class="step-detail-label">Personal Context</span>
+                                    <span class="step-detail-value" id="step-layer3-context">-</span>
+                                </div>
+                                <div class="step-detail-row step-detail-row-full">
+                                    <span class="step-detail-label">Detailed Analysis</span>
+                                    <div class="step-threat-assessment" id="step-layer3-detailed-analysis"></div>
+                                </div>
+                                <div class="step-detail-row step-detail-row-full" id="step-layer3-recommended-action" style="display: none;">
+                                    <span class="step-detail-label">Recommended Action</span>
+                                    <div class="step-recommended-action" id="step-layer3-recommended-action-content"></div>
+                                </div>
+                                <div class="step-detail-row step-detail-row-full" id="step-layer3-tactics" style="display: none;">
+                                    <span class="step-detail-label">Tactics Identified</span>
+                                    <div class="step-tactics-list" id="step-layer3-tactics-list"></div>
+                                </div>
+                            </div>
                         </div>
                         <div class="step-status">
                             <span class="material-icons step-icon-pending">pending</span>
@@ -122,119 +187,12 @@
                             </div>
                             <div class="risk-score-info">
                                 <div class="risk-score-label">Overall Risk Score</div>
-                                <div class="risk-score-value" id="overallRiskScore">0</div>
-                                <div class="risk-score-description" id="riskScoreDescription">Low Risk</div>
+                                <div class="risk-score-value" id="overallRiskScore">-</div>
+                                <div class="risk-score-description" id="riskScoreDescription">-</div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Detailed Layer Results - Collapsible -->
-                    <div class="detailed-results-container" id="detailedResultsContainer" style="display: none;">
-                        <div class="detailed-results-header" id="detailedResultsHeader">
-                            <div class="detailed-results-title">
-                                <span class="material-icons">analytics</span>
-                                <span>Detailed Analysis Results</span>
-                            </div>
-                            <button class="collapse-toggle" id="detailedResultsToggle">
-                                <span class="material-icons">expand_more</span>
-                            </button>
-                        </div>
-                        <div class="detailed-results-content" id="detailedResultsContent" style="display: none;">
-                            <!-- Layer 1: Public Database Check -->
-                            <div class="layer-result-card" id="detailed-layer1">
-                                <div class="layer-result-header">
-                                    <div class="layer-result-badge">
-                                        <span class="material-icons">database</span>
-                                    </div>
-                                    <div class="layer-result-info">
-                                        <h4>Layer 1: Database Check</h4>
-                                        <p>Public spam database analysis</p>
-                                    </div>
-                                    <div class="layer-result-status" id="detailed-layer1Status">
-                                        <span class="material-icons status-icon pending">pending</span>
-                                    </div>
-                                </div>
-                                <div class="layer-result-details" id="detailed-layer1Details">
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Databases Checked</span>
-                                        <span class="result-detail-value" id="detailed-layer1DbCount">0</span>
-                                    </div>
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Confidence</span>
-                                        <span class="result-detail-value" id="detailed-layer1Confidence">-</span>
-                                    </div>
-                                    <div class="result-detail-row" id="detailed-layer1Threats" style="display: none;">
-                                        <span class="result-detail-label">Threats Detected</span>
-                                        <div class="threat-indicators" id="detailed-layer1ThreatIndicators"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Layer 2: AI Classification -->
-                            <div class="layer-result-card" id="detailed-layer2">
-                                <div class="layer-result-header">
-                                    <div class="layer-result-badge">
-                                        <span class="material-icons">psychology</span>
-                                    </div>
-                                    <div class="layer-result-info">
-                                        <h4>Layer 2: AI Classification</h4>
-                                        <p>DistilBERT model analysis</p>
-                                    </div>
-                                    <div class="layer-result-status" id="detailed-layer2Status">
-                                        <span class="material-icons status-icon pending">pending</span>
-                                    </div>
-                                </div>
-                                <div class="layer-result-details" id="detailed-layer2Details">
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Model Confidence</span>
-                                        <span class="result-detail-value" id="detailed-layer2Confidence">-</span>
-                                    </div>
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Classification</span>
-                                        <span class="result-detail-value" id="detailed-layer2Classification">-</span>
-                                    </div>
-                                    <div class="result-detail-row" id="detailed-layer2Indicators" style="display: none;">
-                                        <span class="result-detail-label">Risk Indicators</span>
-                                        <div class="risk-indicators" id="detailed-layer2RiskIndicators"></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Layer 3: Detective Agent -->
-                            <div class="layer-result-card" id="detailed-layer3">
-                                <div class="layer-result-header">
-                                    <div class="layer-result-badge">
-                                        <span class="material-icons">search</span>
-                                    </div>
-                                    <div class="layer-result-info">
-                                        <h4>Layer 3: Detective Analysis</h4>
-                                        <p>Advanced social engineering detection</p>
-                                    </div>
-                                    <div class="layer-result-status" id="detailed-layer3Status">
-                                        <span class="material-icons status-icon pending">pending</span>
-                                    </div>
-                                </div>
-                                <div class="layer-result-details" id="detailed-layer3Details">
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Social Engineering Score</span>
-                                        <span class="result-detail-value" id="detailed-layer3SocialScore">-</span>
-                                    </div>
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Personal Context</span>
-                                        <span class="result-detail-value" id="detailed-layer3Context">-</span>
-                                    </div>
-                                    <div class="result-detail-row">
-                                        <span class="result-detail-label">Tactics Identified</span>
-                                        <span class="result-detail-value" id="detailed-layer3TacticsCount">0</span>
-                                    </div>
-                                    <div class="result-detail-row result-detail-row-full" id="detailed-layer3Assessment" style="display: none;">
-                                        <span class="result-detail-label">Detailed Analysis</span>
-                                        <div class="threat-assessment" id="detailed-layer3AssessmentContent"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -287,6 +245,10 @@
                         <span class="detail-value" id="layer2Confidence">-</span>
                     </div>
                     <div class="detail-row">
+                        <span class="detail-label">Classification</span>
+                        <span class="detail-value" id="layer2Classification">-</span>
+                    </div>
+                    <div class="detail-row">
                         <span class="detail-label">Risk Indicators</span>
                         <div class="risk-indicators" id="layer2Indicators"></div>
                     </div>
@@ -315,6 +277,10 @@
                     <div class="detail-row">
                         <span class="detail-label">Personal Context</span>
                         <span class="detail-value" id="layer3Context">-</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Tactics Identified</span>
+                        <span class="detail-value" id="layer3TacticsCount">0</span>
                     </div>
                     <div class="detail-row detail-row-full">
                         <span class="detail-label">Threat Assessment</span>
@@ -401,8 +367,6 @@
         </footer>
     </div>
 
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="sidebar.js"></script>
 </body>
 </html>
