@@ -190,36 +190,32 @@ class PhishGuardBackend:
             scan_result['layers']['layer2'] = layer2_result
             
             # If Layer 2 confidence is high for benign, stop here
-            if (layer2_result['status'] == 'benign' and 
+            if (layer2_result['status'] == 'benign' and
                 layer2_result['confidence'] > 0.8):
                 scan_result['final_verdict'] = 'safe'
                 scan_result['threat_level'] = 'low'
                 scan_result['confidence_score'] = layer2_result['confidence']
-                logger.info(f"Layer 2 cleared email {scan_result['scan_id']}")
+                logger.info(f"Layer 2 cleared email {scan_result['scan_id']} with high confidence")
                 return self.finalize_scan_result(scan_result, start_time)
-            
-            # If Layer 2 detects potential threat, proceed to Layer 3
-            if (layer2_result['status'] == 'suspicious' or 
-                layer2_result['confidence'] < 0.5):
-                
-                logger.info(f"Running Layer 3 scan for {scan_result['scan_id']}")
-                layer3_result = self.layer3.analyze_email(
-                    processed_email, 
-                    user_id, 
-                    layer2_result
-                )
-                scan_result['layers']['layer3'] = layer3_result
-                
-                # Layer 3 provides final verdict
-                scan_result['final_verdict'] = layer3_result['verdict']
-                scan_result['threat_level'] = layer3_result['threat_level']
-                scan_result['confidence_score'] = layer3_result['confidence']
-            else:
-                # Layer 2 verdict is final
-                scan_result['final_verdict'] = 'safe'
-                scan_result['threat_level'] = 'low'
-                scan_result['confidence_score'] = layer2_result['confidence']
-            
+
+            # Otherwise, run Layer 3 for deeper analysis
+            # This includes: suspicious emails, medium/low confidence benign, and fallback mode
+            logger.info(f"Running Layer 3 scan for {scan_result['scan_id']} "
+                       f"(Layer 2 status: {layer2_result['status']}, "
+                       f"confidence: {layer2_result['confidence']:.2f})")
+
+            layer3_result = self.layer3.analyze_email(
+                processed_email,
+                user_id,
+                layer2_result
+            )
+            scan_result['layers']['layer3'] = layer3_result
+
+            # Layer 3 provides final verdict
+            scan_result['final_verdict'] = layer3_result['verdict']
+            scan_result['threat_level'] = layer3_result['threat_level']
+            scan_result['confidence_score'] = layer3_result['confidence']
+
             return self.finalize_scan_result(scan_result, start_time)
             
         except Exception as e:

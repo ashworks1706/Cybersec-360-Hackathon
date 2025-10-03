@@ -440,7 +440,9 @@ class ScanHistoryManager {
             icon.textContent = (index + 1);
 
             if (layer) {
-                const status = layer.status;
+                // Layer 3 uses 'verdict' instead of 'status'
+                const status = layerKey === 'layer3' ? layer.verdict : layer.status;
+
                 if (status === 'clean' || status === 'safe' || status === 'benign') {
                     icon.classList.add('safe');
                 } else if (status === 'threat' || status === 'danger') {
@@ -448,12 +450,16 @@ class ScanHistoryManager {
                 } else {
                     icon.classList.add('warning');
                 }
+
+                // Display proper status in tooltip
+                const displayStatus = status || 'N/A';
+                icon.title = `Layer ${index + 1}: ${displayStatus}`;
             } else {
                 icon.style.background = '#e2e8f0';
                 icon.style.color = '#cbd5e0';
+                icon.title = `Layer ${index + 1}: Not executed`;
             }
 
-            icon.title = `Layer ${index + 1}: ${layer?.status || 'N/A'}`;
             container.appendChild(icon);
         });
 
@@ -499,16 +505,52 @@ class ScanHistoryManager {
             const layer = layers[layerKey];
             const layerNames = ['Public Database Check', 'AI Classification', 'Detective Agent'];
 
-            html += `
-                <div style="background: #f7fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
-                    <h5 style="font-size: 16px; color: #2d3748; margin-bottom: 8px;">Layer ${index + 1}: ${layerNames[index]}</h5>
-                    ${layer ? `
-                        <p style="margin-bottom: 4px;"><strong>Status:</strong> ${layer.status || 'N/A'}</p>
+            if (layerKey === 'layer3' && layer) {
+                // Special rendering for Layer 3 with all its unique fields
+                html += `
+                    <div style="background: #f7fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                        <h5 style="font-size: 16px; color: #2d3748; margin-bottom: 8px;">Layer 3: ${layerNames[index]}</h5>
+                        <p style="margin-bottom: 4px;"><strong>Verdict:</strong> <span class="verdict-badge ${layer.verdict || 'unknown'}">${layer.verdict || 'N/A'}</span></p>
+                        <p style="margin-bottom: 4px;"><strong>Threat Level:</strong> ${layer.threat_level || 'N/A'}</p>
                         <p style="margin-bottom: 4px;"><strong>Confidence:</strong> ${layer.confidence ? Math.round(layer.confidence * 100) + '%' : 'N/A'}</p>
-                        ${layer.verdict ? `<p style="margin-bottom: 0;"><strong>Verdict:</strong> ${layer.verdict}</p>` : ''}
-                    ` : '<p style="margin: 0; color: #718096;">Not executed</p>'}
-                </div>
-            `;
+                        <p style="margin-bottom: 4px;"><strong>Social Engineering Score:</strong> ${layer.social_engineering_score || 0}%</p>
+                        <p style="margin-bottom: 4px;"><strong>Impersonation Risk:</strong> ${layer.impersonation_risk || 'N/A'}</p>
+                        <p style="margin-bottom: 4px;"><strong>Personal Context:</strong> ${layer.personal_context || 'N/A'}</p>
+                        ${layer.detailed_analysis ? `
+                            <div style="margin-top: 12px;">
+                                <strong>Detailed Analysis:</strong>
+                                <p style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; white-space: pre-wrap; color: #4a5568; font-size: 14px;">${layer.detailed_analysis}</p>
+                            </div>
+                        ` : ''}
+                        ${layer.recommended_action ? `
+                            <div style="margin-top: 12px;">
+                                <strong>Recommended Action:</strong>
+                                <p style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; color: #4a5568; font-size: 14px;">${layer.recommended_action}</p>
+                            </div>
+                        ` : ''}
+                        ${layer.tactics_identified && layer.tactics_identified.length > 0 ? `
+                            <div style="margin-top: 12px;">
+                                <strong>Tactics Identified:</strong>
+                                <ul style="margin-top: 8px; padding-left: 20px; color: #4a5568; font-size: 14px;">
+                                    ${layer.tactics_identified.map(tactic => `<li style="margin-bottom: 4px;">${tactic}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                // Standard rendering for Layer 1 and Layer 2
+                html += `
+                    <div style="background: #f7fafc; padding: 16px; border-radius: 8px; margin-bottom: 12px;">
+                        <h5 style="font-size: 16px; color: #2d3748; margin-bottom: 8px;">Layer ${index + 1}: ${layerNames[index]}</h5>
+                        ${layer ? `
+                            <p style="margin-bottom: 4px;"><strong>Status:</strong> ${layer.status || layer.verdict || 'N/A'}</p>
+                            <p style="margin-bottom: 4px;"><strong>Confidence:</strong> ${layer.confidence ? Math.round(layer.confidence * 100) + '%' : 'N/A'}</p>
+                            ${layer.verdict && layerKey !== 'layer3' ? `<p style="margin-bottom: 0;"><strong>Verdict:</strong> ${layer.verdict}</p>` : ''}
+                        ` : '<p style="margin: 0; color: #718096;">Not executed</p>'}
+                    </div>
+                `;
+            }
         });
 
         return html;
