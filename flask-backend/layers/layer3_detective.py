@@ -2,6 +2,7 @@
 # Advanced social engineering detection with user context
 
 import logging
+import os
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
@@ -10,6 +11,7 @@ try:
 except ImportError:
     genai = None
 from database.rag_database import RAGDatabase
+from config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -32,15 +34,28 @@ class Layer3DetectiveAgent:
     def setup_gemini(self):
         """Setup Google Gemini AI"""
         try:
-            # In production, load from environment variable
-            api_key = "YOUR_GEMINI_API_KEY"  # Replace with actual API key
+            # Load API key from environment configuration
+            api_key = Config.GEMINI_API_KEY
+
+            # Validate API key
+            if not api_key or api_key == 'your-gemini-api-key-here':
+                logger.error("GEMINI_API_KEY not configured. Please set it in .env file")
+                self.model = None
+                return
+
+            if not genai:
+                logger.error("google.generativeai module not installed. Install with: pip install google-generativeai")
+                self.model = None
+                return
+
+            # Configure Gemini with API key
             genai.configure(api_key=api_key)
-            
-            # Initialize model
-            self.model = genai.GenerativeModel('gemini-pro')
-            
-            logger.info("Gemini AI configured successfully")
-            
+
+            # Initialize model with latest flash model (fast and efficient for phishing detection)
+            self.model = genai.GenerativeModel('gemini-2.5-flash')
+
+            logger.info("Gemini AI configured successfully with gemini-2.5-flash model")
+
         except Exception as e:
             logger.error(f"Failed to setup Gemini AI: {e}")
             self.model = None
