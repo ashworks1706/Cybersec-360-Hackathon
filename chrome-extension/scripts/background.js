@@ -32,12 +32,67 @@ class PhishGuardBackground {
     
     async initializeExtension() {
         console.log('🛡️ PhishGuard 360 Background Service Started');
-        
+
+        // Migrate old scan history from sync to local storage (one-time migration)
+        await this.migrateScanHistoryToLocal();
+
         // Initialize storage with default values
         await this.initializeStorage();
-        
+
         // Set up periodic tasks
         this.setupPeriodicTasks();
+    }
+
+    async migrateScanHistoryToLocal() {
+        try {
+            // Check if we have scan history in sync storage
+            const syncData = await new Promise((resolve) => {
+                chrome.storage.sync.get(['scanHistory', 'migrationComplete'], resolve);
+            });
+
+            if (syncData.migrationComplete) {
+                console.log('PhishGuard: Storage migration already completed');
+                return;
+            }
+
+            if (syncData.scanHistory && syncData.scanHistory.length > 0) {
+                console.log(`PhishGuard: Migrating ${syncData.scanHistory.length} scans to local storage...`);
+
+                // Get existing local storage data
+                const localData = await new Promise((resolve) => {
+                    chrome.storage.local.get(['scanHistory'], resolve);
+                });
+
+                // Merge old and new scan history
+                const mergedHistory = [...syncData.scanHistory, ...(localData.scanHistory || [])];
+
+                // Store in local storage
+                await new Promise((resolve) => {
+                    chrome.storage.local.set({ scanHistory: mergedHistory }, resolve);
+                });
+
+                console.log('PhishGuard: Migration complete');
+            }
+
+            // Clear scan history from sync storage and mark migration as complete
+            await new Promise((resolve) => {
+                chrome.storage.sync.set({
+                    scanHistory: [], // Clear the array
+                    migrationComplete: true
+                }, resolve);
+            });
+
+            // Actually remove scanHistory key from sync to free up space
+            await new Promise((resolve) => {
+                chrome.storage.sync.remove(['scanHistory'], resolve);
+            });
+
+            console.log('PhishGuard: Old sync storage cleaned up');
+
+        } catch (error) {
+            console.error('PhishGuard: Storage migration failed:', error);
+            // Continue anyway - extension should still work
+        }
     }
     
     async initializeStorage() {
@@ -129,32 +184,44 @@ class PhishGuardBackground {
                     const settings = await this.getSettings();
                     sendResponse({ success: true, data: settings });
                     break;
-                    
+
                 case 'UPDATE_SETTINGS':
                     await this.updateSettings(request.settings);
                     sendResponse({ success: true });
                     break;
-                    
-                case 'SCAN_EMAIL':
-                    const scanResult = await this.handleEmailScan(request.emailData);
+
+                case 'PERFORM_SCAN':
+                    // NEW: Proxy API call to Flask backend
+                    const scanResult = await this.performBackendScan(request.emailData, request.userId);
                     sendResponse({ success: true, data: scanResult });
                     break;
-                    
+
+                case 'SCAN_EMAIL':
+                    const localScanResult = await this.handleEmailScan(request.emailData);
+                    sendResponse({ success: true, data: localScanResult });
+                    break;
+
                 case 'GET_SCAN_HISTORY':
                     const history = await this.getScanHistory();
                     sendResponse({ success: true, data: history });
                     break;
-                    
+
+                case 'FETCH_BACKEND_SCAN_HISTORY':
+                    // NEW: Proxy API call to get scan history from backend
+                    const backendHistory = await this.fetchBackendScanHistory(request.userId, request.limit, request.offset);
+                    sendResponse({ success: true, data: backendHistory });
+                    break;
+
                 case 'ADD_TRUSTED_SENDER':
                     await this.addTrustedSender(request.sender);
                     sendResponse({ success: true });
                     break;
-                    
+
                 case 'BLOCK_SENDER':
                     await this.blockSender(request.sender);
                     sendResponse({ success: true });
                     break;
-                    
+
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' });
             }
@@ -206,23 +273,25 @@ class PhishGuardBackground {
     
     async getScanHistory() {
         return new Promise((resolve) => {
-            chrome.storage.sync.get(['scanHistory'], (result) => {
+            // Use LOCAL storage for scan history (larger limit: 5MB vs sync's 100KB)
+            chrome.storage.local.get(['scanHistory'], (result) => {
                 resolve(result.scanHistory || []);
             });
         });
     }
-    
+
     async addToScanHistory(scanResult) {
         const history = await this.getScanHistory();
         history.unshift(scanResult);
-        
-        // Keep only last 100 scans
+
+        // Keep only last 100 scans to prevent storage bloat
         if (history.length > 100) {
             history.splice(100);
         }
-        
+
         return new Promise((resolve) => {
-            chrome.storage.sync.set({ scanHistory: history }, resolve);
+            // Use LOCAL storage for scan history (avoids quota exceeded errors)
+            chrome.storage.local.set({ scanHistory: history }, resolve);
         });
     }
     
@@ -280,6 +349,77 @@ class PhishGuardBackground {
         chrome.storage.sync.set({ scanHistory: recentHistory });
     }
     
+    async performBackendScan(emailData, userId) {
+        /**
+         * Proxy method to call Flask backend /api/scan endpoint
+         * Background scripts CAN make external API calls (unlike content scripts)
+         */
+        const backendUrl = 'http://localhost:5000/api/scan';
+
+        try {
+            console.log('Background: Calling Flask backend for scan...');
+
+            const response = await fetch(backendUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email_data: emailData,
+                    user_id: userId,
+                    scan_type: 'full'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+            }
+
+            const scanResult = await response.json();
+            console.log('Background: Scan result received from backend');
+
+            // Also store in local storage for backup
+            await this.addToScanHistory(scanResult);
+
+            return scanResult;
+
+        } catch (error) {
+            console.error('Background: Flask backend scan failed:', error);
+            throw new Error(`Failed to connect to backend: ${error.message}`);
+        }
+    }
+
+    async fetchBackendScanHistory(userId, limit = 50, offset = 0) {
+        /**
+         * Proxy method to call Flask backend /api/scan-history endpoint
+         */
+        const backendUrl = `http://localhost:5000/api/scan-history/${userId}?limit=${limit}&offset=${offset}`;
+
+        try {
+            console.log('Background: Fetching scan history from backend...');
+
+            const response = await fetch(backendUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Backend error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log(`Background: Received ${data.scans?.length || 0} scans from backend`);
+
+            return data;
+
+        } catch (error) {
+            console.error('Background: Failed to fetch scan history from backend:', error);
+            throw new Error(`Failed to fetch history: ${error.message}`);
+        }
+    }
+
     showWelcomeNotification() {
         // Check if notifications API is available
         if (chrome.notifications && chrome.notifications.create) {

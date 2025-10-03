@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard 360 - Scan History</title>
+    <link rel="stylesheet" href="history.css">
+</head>
+<body>
+    <div class="history-container">
+        <!-- Header -->
+        <header class="history-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <svg class="shield-icon" viewBox="0 0 24 24" fill="none">
+                        <path d="M12 2L2 7V10C2 16 6 20.5 12 22C18 20.5 22 16 22 10V7L12 2Z"
+                              stroke="currentColor" stroke-width="2" fill="none"/>
+                        <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    <h1>PhishGuard 360</h1>
+                </div>
+                <div class="header-subtitle">
+                    <h2>Scan History</h2>
+                    <p>View all your email security scans</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Statistics Summary -->
+        <div class="stats-container" id="statsContainer">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="totalScans">0</div>
+                    <div class="stat-label">Total Scans</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">✅</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="safeEmails">0</div>
+                    <div class="stat-label">Safe Emails</div>
+                </div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-icon">❌</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="threatsBlocked">0</div>
+                    <div class="stat-label">Threats Blocked</div>
+                </div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-icon">⚠️</div>
+                <div class="stat-content">
+                    <div class="stat-value" id="suspiciousEmails">0</div>
+                    <div class="stat-label">Suspicious Emails</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="filters-container">
+            <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
+                    <path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Search by sender or subject...">
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="safe">Safe</button>
+                <button class="filter-btn" data-filter="threat">Threats</button>
+                <button class="filter-btn" data-filter="suspicious">Suspicious</button>
+            </div>
+            <button class="refresh-btn" id="refreshBtn">
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M21 12C21 16.97 16.97 21 12 21C7.03 21 3 16.97 3 12C3 7.03 7.03 3 12 3C14.76 3 17.23 4.24 18.83 6.18" stroke="currentColor" stroke-width="2"/>
+                    <path d="M15 6H21V12" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div class="loading-container" id="loadingContainer">
+            <div class="loading-spinner"></div>
+            <p>Loading scan history...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-container" id="errorContainer" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <h3>Failed to Load History</h3>
+            <p id="errorMessage">An error occurred while loading scan history</p>
+            <button class="retry-btn" id="retryBtn">Try Again</button>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-container" id="emptyContainer" style="display: none;">
+            <div class="empty-icon">📭</div>
+            <h3>No Scan History</h3>
+            <p>You haven't scanned any emails yet. Start scanning emails to see your history here.</p>
+        </div>
+
+        <!-- Scan History Table -->
+        <div class="history-table-container" id="historyTableContainer" style="display: none;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th class="sortable" data-sort="date">
+                            Date & Time
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="sender">
+                            Sender
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="subject">
+                            Subject
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="verdict">
+                            Verdict
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th class="sortable" data-sort="confidence">
+                            Confidence
+                            <span class="sort-icon">↕</span>
+                        </th>
+                        <th>Layers</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody">
+                    <!-- Scan history rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container" id="paginationContainer" style="display: none;">
+            <button class="pagination-btn" id="prevBtn" disabled>Previous</button>
+            <div class="pagination-info">
+                Page <span id="currentPage">1</span> of <span id="totalPages">1</span>
+            </div>
+            <button class="pagination-btn" id="nextBtn" disabled>Next</button>
+        </div>
+    </div>
+
+    <!-- Scan Details Modal -->
+    <div class="modal-overlay" id="modalOverlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Scan Details</h3>
+                <button class="modal-close" id="modalClose">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Scan details will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="history.js"></script>
+</body>
+</html>

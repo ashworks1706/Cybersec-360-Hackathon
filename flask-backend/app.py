@@ -120,15 +120,36 @@ class PhishGuardBackend:
                     'scan_results': data.get('scan_results'),
                     'timestamp': datetime.utcnow().isoformat()
                 }
-                
+
                 # Store for MLOps pipeline
                 self.layer2.store_feedback(feedback_data)
-                
+
                 return jsonify({'status': 'feedback_received'})
-                
+
             except Exception as e:
                 logger.error(f"Failed to process feedback: {str(e)}")
                 return jsonify({'error': 'Failed to process feedback'}), 500
+
+        @self.app.route('/api/scan-history/<user_id>', methods=['GET'])
+        def get_scan_history(user_id):
+            """Get scan history for a specific user"""
+            try:
+                # Get query parameters for filtering
+                limit = request.args.get('limit', 50, type=int)
+                offset = request.args.get('offset', 0, type=int)
+
+                # Get scan history from database
+                scan_history = self.rag_db.get_scan_history(user_id, limit, offset)
+
+                return jsonify({
+                    'user_id': user_id,
+                    'total_scans': len(scan_history),
+                    'scans': scan_history
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to get scan history: {str(e)}")
+                return jsonify({'error': 'Failed to retrieve scan history'}), 500
     
     def process_email_scan(self, email_data, user_id, scan_type):
         """Process email through all security layers"""
@@ -212,13 +233,20 @@ class PhishGuardBackend:
         end_time = datetime.utcnow()
         processing_time = (end_time - start_time).total_seconds()
         scan_result['processing_time'] = processing_time
-        
+
         # Log scan result
         logger.info(f"Scan {scan_result['scan_id']} completed: "
                    f"verdict={scan_result['final_verdict']}, "
                    f"confidence={scan_result['confidence_score']:.2f}, "
                    f"time={processing_time:.2f}s")
-        
+
+        # Store scan result in RAG database for history
+        try:
+            self.rag_db.store_scan_result(scan_result)
+            logger.info(f"Scan result stored in database for user {scan_result['user_id']}")
+        except Exception as e:
+            logger.error(f"Failed to store scan result in database: {str(e)}")
+
         return scan_result
     
     def run(self, host='localhost', port=5000, debug=True):

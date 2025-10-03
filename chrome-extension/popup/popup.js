@@ -59,7 +59,8 @@ class PhishGuardPopup {
     
     getScanHistory() {
         return new Promise((resolve) => {
-            chrome.storage.sync.get(['scanHistory'], (result) => {
+            // Use LOCAL storage for scan history (larger limit, avoids quota errors)
+            chrome.storage.local.get(['scanHistory'], (result) => {
                 resolve(result.scanHistory || []);
             });
         });
@@ -202,27 +203,29 @@ class PhishGuardPopup {
                 const pingResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
                 console.log('Content script ping successful:', pingResponse);
             } catch (pingError) {
-                console.warn('Content script not responding, attempting injection...');
-                
+                // This is normal if Gmail was loaded before extension reload
+                console.log('Content script not loaded, injecting...');
+
                 try {
                     // Inject content script if it's not already there
                     await chrome.scripting.executeScript({
                         target: { tabId: currentTab.id },
                         files: ['scripts/content.js']
                     });
-                    
+
                     // Inject CSS as well
                     await chrome.scripting.insertCSS({
                         target: { tabId: currentTab.id },
                         files: ['styles/content.css']
                     });
-                    
+
                     // Wait a moment for initialization
                     await new Promise(resolve => setTimeout(resolve, 2000));
-                    
+
                     // Try ping again
                     await this.sendMessageWithTimeout(currentTab.id, { type: 'PING' }, 2000);
-                    
+                    console.log('Content script injected successfully');
+
                 } catch (injectionError) {
                     console.error('Failed to inject content script:', injectionError);
                     this.showNotification('Please refresh Gmail and try again', 'error');
