@@ -55,15 +55,15 @@ fi
 
 # Pull latest images
 echo "📦 Pulling latest Docker images..."
-docker-compose pull
+docker compose pull
 
 # Build application
 echo "🔨 Building PhishGuard 360..."
-docker-compose build --no-cache
+docker compose build --no-cache
 
 # Start services
 echo "🚀 Starting PhishGuard 360 services..."
-docker-compose up -d
+docker compose up -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to be healthy..."
@@ -71,11 +71,11 @@ sleep 30
 
 # Check service health
 echo "🏥 Checking service health..."
-if docker-compose ps | grep -q "Up (healthy)"; then
+if docker compose ps | grep -q "Up (healthy)"; then
     echo "✅ Services are healthy!"
 else
     echo "⚠️  Some services may not be fully healthy yet. Checking logs..."
-    docker-compose logs --tail=20
+    docker compose logs --tail=20
 fi
 
 # Display service information
@@ -88,12 +88,12 @@ echo "   • API Endpoint: https://localhost/api"
 echo "   • Monitoring: http://localhost:9090 (Prometheus)"
 echo ""
 echo "📋 Useful commands:"
-echo "   • View logs: docker-compose logs -f"
-echo "   • Stop services: docker-compose down"
-echo "   • Restart: docker-compose restart"
-echo "   • Update: docker-compose pull && docker-compose up -d"
+echo "   • View logs: docker compose logs -f"
+echo "   • Stop services: docker compose down"
+echo "   • Restart: docker compose restart"
+echo "   • Update: docker compose pull && docker compose up -d"
 echo ""
 echo "🔧 Troubleshooting:"
-echo "   • Check service status: docker-compose ps"
-echo "   • View specific service logs: docker-compose logs <service-name>"
-echo "   • Access backend container: docker-compose exec phishguard-backend bash"
+echo "   • Check service status: docker compose ps"
+echo "   • View specific service logs: docker compose logs <service-name>"
+echo "   • Access backend container: docker compose exec phishguard-backend bash"

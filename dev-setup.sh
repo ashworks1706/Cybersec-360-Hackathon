@@ -18,7 +18,7 @@ fi
 
 # Start development environment
 echo "🚀 Starting development environment..."
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 
 # Wait for services
 echo "⏳ Waiting for services to start..."
@@ -26,7 +26,7 @@ sleep 20
 
 # Check if services are running
 echo "🔍 Checking service status..."
-if docker-compose -f docker-compose.dev.yml ps | grep -q "Up"; then
+if docker compose -f docker-compose.dev.yml ps | grep -q "Up"; then
     echo "✅ Development environment started successfully!"
     echo ""
     echo "📊 Development URLs:"
@@ -35,13 +35,13 @@ if docker-compose -f docker-compose.dev.yml ps | grep -q "Up"; then
     echo "   • Redis: http://localhost:6379"
     echo ""
     echo "🔧 Development commands:"
-    echo "   • View logs: docker-compose -f docker-compose.dev.yml logs -f"
-    echo "   • Stop: docker-compose -f docker-compose.dev.yml down"
-    echo "   • Restart: docker-compose -f docker-compose.dev.yml restart"
-    echo "   • Shell access: docker-compose -f docker-compose.dev.yml exec phishguard-backend-dev bash"
+    echo "   • View logs: docker compose -f docker-compose.dev.yml logs -f"
+    echo "   • Stop: docker compose -f docker-compose.dev.yml down"
+    echo "   • Restart: docker compose -f docker-compose.dev.yml restart"
+    echo "   • Shell access: docker compose -f docker-compose.dev.yml exec phishguard-backend-dev bash"
     echo ""
     echo "📝 The backend code is mounted as a volume for hot reloading!"
 else
     echo "❌ Failed to start development environment"
-    docker-compose -f docker-compose.dev.yml logs
+    docker compose -f docker-compose.dev.yml logs
 fi

@@ -88,29 +88,29 @@ API_RATE_LIMIT=100
 ### Production
 ```bash
 # Start all services
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Update deployment
-docker-compose pull
-docker-compose up -d --force-recreate
+docker compose pull
+docker compose up -d --force-recreate
 ```
 
 ### Development
 ```bash
 # Start development environment
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 
 # Watch logs
-docker-compose -f docker-compose.dev.yml logs -f
+docker compose -f docker-compose.dev.yml logs -f
 
 # Access backend shell
-docker-compose -f docker-compose.dev.yml exec phishguard-backend-dev bash
+docker compose -f docker-compose.dev.yml exec phishguard-backend-dev bash
 ```
 
 ## 🔍 Health Checks
@@ -119,7 +119,7 @@ All services include health checks:
 
 ```bash
 # Check service health
-docker-compose ps
+docker compose ps
 
 # Detailed health status
 docker inspect <container-name> | jq '.[0].State.Health'
@@ -162,16 +162,16 @@ docker inspect <container-name> | jq '.[0].State.Health'
 1. **Services won't start**
    ```bash
    # Check logs
-   docker-compose logs <service-name>
+   docker compose logs <service-name>
    
    # Rebuild containers
-   docker-compose build --no-cache
+   docker compose build --no-cache
    ```
 
 2. **API key errors**
    ```bash
    # Verify environment variables
-   docker-compose exec phishguard-backend env | grep API_KEY
+   docker compose exec phishguard-backend env | grep API_KEY
    ```
 
 3. **Permission issues**
@@ -210,7 +210,7 @@ docker inspect <container-name> | jq '.[0].State.Health'
 ### Backup Data
 ```bash
 # Backup database
-docker-compose exec phishguard-backend sqlite3 /app/database/data/phishguard.db ".backup /app/backup.db"
+docker compose exec phishguard-backend sqlite3 /app/database/data/phishguard.db ".backup /app/backup.db"
 docker cp phishguard-backend:/app/backup.db ./backup.db
 
 # Backup volumes
@@ -221,7 +221,7 @@ docker run --rm -v phishguard_data:/data -v $(pwd):/backup alpine tar czf /backu
 ```bash
 # Restore database
 docker cp ./backup.db phishguard-backend:/app/restore.db
-docker-compose exec phishguard-backend sqlite3 /app/database/data/phishguard.db ".restore /app/restore.db"
+docker compose exec phishguard-backend sqlite3 /app/database/data/phishguard.db ".restore /app/restore.db"
 ```
 
 ## 📝 Development Notes
