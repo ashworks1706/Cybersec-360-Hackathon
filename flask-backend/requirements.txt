@@ -1,0 +1,17 @@
+flask==2.3.3
+flask-cors==4.0.0
+torch==2.0.1
+transformers==4.33.2
+numpy==1.24.3
+pandas==2.0.3
+scikit-learn==1.3.0
+requests==2.31.0
+python-dotenv==1.0.0
+google-generativeai==0.3.0
+sqlite3
+hashlib
+email-validator==2.0.0
+beautifulsoup4==4.12.2
+nltk==3.8.1
+sentence-transformers==2.2.2
+chromadb==0.4.15
