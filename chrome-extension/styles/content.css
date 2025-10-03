@@ -1,0 +1,127 @@
+/* PhishGuard 360 - Content Script Styles */
+
+.phishguard-scan-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    margin: 0 8px 0 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+    border: none;
+    outline: none;
+    position: relative;
+    z-index: 1000;
+    min-height: 32px;
+}
+
+.phishguard-scan-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.phishguard-scan-button.scanning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    animation: pulse 2s infinite;
+    cursor: not-allowed;
+}
+
+.scan-btn-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.scan-btn-content svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Sidebar Container */
+#phishguard-sidebar {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 400px;
+    height: 100vh;
+    background: white;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    z-index: 10000;
+    transition: right 0.3s ease;
+    border-left: 1px solid #e0e0e0;
+}
+
+#phishguard-sidebar.phishguard-sidebar-visible {
+    right: 0;
+}
+
+/* Notifications */
+.phishguard-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 16px;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 10001;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.phishguard-notification.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.phishguard-notification.info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.phishguard-notification.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.phishguard-notification.error {
+    background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+}
+
+.phishguard-notification.success {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* Gmail Integration Fixes */
+.phishguard-scan-button {
+    font-family: 'Google Sans', Roboto, RobotoDraft, Helvetica, Arial, sans-serif !important;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #phishguard-sidebar {
+        width: 100vw;
+        right: -100vw;
+    }
+    
+    .phishguard-scan-button {
+        padding: 6px 10px;
+        font-size: 11px;
+    }
+}
