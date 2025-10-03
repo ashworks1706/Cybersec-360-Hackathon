@@ -54,6 +54,57 @@ class SecurityDashboard {
         this.refreshBtn.addEventListener('click', () => this.refreshDashboard());
         this.backBtn.addEventListener('click', () => this.goBack());
         
+        // Navigation buttons
+        const openGmailBtn = document.getElementById('openGmailBtn');
+        const documentsBtn = document.getElementById('documentsBtn');
+        const trainingBtn = document.getElementById('trainingBtn');
+        const profileBtn = document.getElementById('profileBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const viewAllActivityBtn = document.getElementById('viewAllActivityBtn');
+        const editProfileBtn = document.getElementById('editProfileBtn');
+        
+        if (openGmailBtn) {
+            openGmailBtn.addEventListener('click', () => {
+                chrome.tabs.create({url: 'https://mail.google.com'});
+            });
+        }
+        
+        if (documentsBtn) {
+            documentsBtn.addEventListener('click', () => {
+                window.open('documents.html', '_blank');
+            });
+        }
+        
+        if (trainingBtn) {
+            trainingBtn.addEventListener('click', () => {
+                window.open('training.html', '_blank');
+            });
+        }
+        
+        if (profileBtn) {
+            profileBtn.addEventListener('click', () => {
+                window.open('profile.html', '_blank');
+            });
+        }
+        
+        if (historyBtn) {
+            historyBtn.addEventListener('click', () => {
+                window.open('history.html', '_blank');
+            });
+        }
+        
+        if (viewAllActivityBtn) {
+            viewAllActivityBtn.addEventListener('click', () => {
+                window.open('history.html', '_blank');
+            });
+        }
+        
+        if (editProfileBtn) {
+            editProfileBtn.addEventListener('click', () => {
+                window.open('profile.html', '_blank');
+            });
+        }
+        
         // Auto-refresh every 30 seconds
         setInterval(() => this.loadDashboardData(), 30000);
     }

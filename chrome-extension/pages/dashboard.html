@@ -108,7 +108,7 @@
                         <span class="material-icons">history</span>
                         Recent Activity
                     </h3>
-                    <button class="view-all-btn" onclick="window.open('history.html', '_blank')">View All</button>
+                    <button class="view-all-btn" id="viewAllActivityBtn">View All</button>
                 </div>
                 <div class="activity-list" id="recentActivity">
                     <div class="empty-state">
@@ -144,7 +144,7 @@
                         <span class="material-icons">account_circle</span>
                         Profile Summary
                     </h3>
-                    <button class="edit-profile-btn" onclick="window.open('profile.html', '_blank')">
+                    <button class="edit-profile-btn" id="editProfileBtn">
                         <span class="material-icons">edit</span>
                         Edit
                     </button>
@@ -217,23 +217,23 @@
 
         <!-- Quick Actions -->
         <div class="quick-actions">
-            <button class="action-btn primary" onclick="chrome.tabs.create({url: 'https://mail.google.com'})">
+            <button class="action-btn primary" id="openGmailBtn">
                 <span class="material-icons">email</span>
                 Open Gmail
             </button>
-            <button class="action-btn secondary" onclick="window.open('documents.html', '_blank')">
+            <button class="action-btn secondary" id="documentsBtn">
                 <span class="material-icons">description</span>
                 Documents
             </button>
-            <button class="action-btn secondary" onclick="window.open('training.html', '_blank')">
+            <button class="action-btn secondary" id="trainingBtn">
                 <span class="material-icons">model_training</span>
                 Training
             </button>
-            <button class="action-btn secondary" onclick="window.open('profile.html', '_blank')">
+            <button class="action-btn secondary" id="profileBtn">
                 <span class="material-icons">settings</span>
                 Settings
             </button>
-            <button class="action-btn secondary" onclick="window.open('history.html', '_blank')">
+            <button class="action-btn secondary" id="historyBtn">
                 <span class="material-icons">history</span>
                 Full History
             </button>
