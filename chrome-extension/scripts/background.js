@@ -289,12 +289,35 @@ class PhishGuardBackground {
             history.splice(100);
         }
 
-        return new Promise((resolve) => {
+        await new Promise((resolve) => {
             // Use LOCAL storage for scan history (avoids quota exceeded errors)
             chrome.storage.local.set({ scanHistory: history }, resolve);
         });
+
+        // Update scan statistics
+        await this.updateScanStatistics(scanResult);
     }
     
+    async updateScanStatistics(scanResult) {
+        // Update total scans and threats blocked counters
+        const settings = await this.getSettings();
+
+        const totalScans = (settings.totalScans || 0) + 1;
+        let threatsBlocked = settings.threatsBlocked || 0;
+
+        // Check if scan detected a threat (handle both camelCase and snake_case)
+        const verdict = scanResult.finalVerdict || scanResult.final_verdict;
+        if (verdict === 'threat') {
+            threatsBlocked++;
+        }
+
+        await new Promise((resolve) => {
+            chrome.storage.sync.set({ totalScans, threatsBlocked }, resolve);
+        });
+
+        console.log(`📊 Statistics updated: ${totalScans} total scans, ${threatsBlocked} threats blocked`);
+    }
+
     async addTrustedSender(sender) {
         return new Promise((resolve) => {
             chrome.storage.sync.get(['trustedSenders'], (result) => {
