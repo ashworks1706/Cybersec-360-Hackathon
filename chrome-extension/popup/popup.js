@@ -108,7 +108,7 @@ class PhishGuardPopup {
             const timeAgo = this.getTimeAgo(scan.timestamp);
 
             return `
-                <div class="scan-item ${statusClass}">
+                <div class="scan-item ${statusClass}" data-scan-id="${scan.scanId}" style="cursor: pointer;">
                     <div class="scan-info">
                         <div class="scan-sender">${this.truncateText(scan.emailData?.sender || 'Unknown', 25)}</div>
                         <div class="scan-time">${timeAgo}</div>
@@ -117,6 +117,16 @@ class PhishGuardPopup {
                 </div>
             `;
         }).join('');
+
+        // Add click handlers to scan items
+        document.querySelectorAll('.scan-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const scanId = item.dataset.scanId;
+                if (scanId) {
+                    this.openScanInHistory(scanId);
+                }
+            });
+        });
     }
     
     getScanStatusClass(scan) {
@@ -306,9 +316,9 @@ class PhishGuardPopup {
                 const scanResponse = await this.sendMessageWithTimeout(currentTab.id, { type: 'TRIGGER_SCAN', source: 'popup' }, 5000);
 
                 if (scanResponse && scanResponse.success) {
-                    this.showNotification('Email scan started! Check the sidebar for results.', 'success');
-                    // Don't auto-close popup - let users close it manually
-                    // This prevents the popup from disappearing unexpectedly
+                    // Close popup immediately after successful scan trigger
+                    // The sidebar will open automatically
+                    window.close();
                 } else {
                     this.showNotification(scanResponse?.error || 'Failed to start scan', 'error');
                 }
@@ -364,6 +374,12 @@ class PhishGuardPopup {
     openHistoryPage() {
         chrome.tabs.create({
             url: chrome.runtime.getURL('pages/history.html')
+        });
+    }
+
+    openScanInHistory(scanId) {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL(`pages/history.html?scanId=${scanId}`)
         });
     }
     

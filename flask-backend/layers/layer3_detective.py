@@ -86,13 +86,13 @@ SOCIAL_ENGINEERING_SCORE: [number between 0-100]
 
 Then provide detailed analysis covering:
 
-**Tactics Identified**: List each specific social engineering tactic used (use bullet points with - or *)
+Tactics Identified: List each specific social engineering tactic used (use bullet points with - or *)
 
-**Personal Context Relevance**: How the attack relates to the user's profile
+Personal Context Relevance: How the attack relates to the user's profile
 
-**Threat Assessment**: Detailed explanation of the threat
+Threat Assessment: Detailed explanation of the threat
 
-**Recommended Action**: What the user should do
+Recommended Action: What the user should do
 
 SCORING GUIDE:
 - 0-20: No social engineering detected
@@ -100,6 +100,14 @@ SCORING GUIDE:
 - 41-60: Moderate social engineering tactics (3-5 tactics)
 - 61-80: Significant social engineering (6-10 tactics)
 - 81-100: Severe/sophisticated social engineering attack (10+ tactics)
+
+FORMATTING REQUIREMENTS:
+- Use plain text only
+- NO markdown formatting (no asterisks, no hashtags, no bold/italic markers)
+- Use simple bullet points with dash (-)
+- Keep section headers as plain text followed by colon
+- Each tactic should be a separate bullet point
+- Do not use parentheses in section headers
 
 Be thorough in identifying tactics. Focus on patterns that indicate deception, manipulation, or impersonation.
 """,
@@ -479,8 +487,19 @@ Analyze if this continues a legitimate conversation or if the tone/content has s
                         tactic = re.sub(r'^[-*•]\s*', '', line.strip())
                         if tactic and len(tactic) > 10:  # Avoid empty or too short entries
                             analysis['tactics'].append(tactic)
+                    # Handle comma-separated tactics (e.g., "Malware Installation: ..., Further Data Harvesting: ..., Bypassing Security Filters: ...")
+                    elif ',' in line and ':' in line:
+                        # Split by comma and clean up
+                        potential_tactics = line.split(',')
+                        for potential_tactic in potential_tactics:
+                            cleaned = potential_tactic.strip()
+                            # Only add if it has a colon (tactic name: description format) and is long enough
+                            if ':' in cleaned and len(cleaned) > 15:
+                                analysis['tactics'].append(cleaned)
                     # Stop if we hit next section
                     elif line.strip().startswith('**') and 'tactics' not in line.lower():
+                        tactics_section = False
+                    elif 'Personal Context Relevance' in line or 'Threat Assessment' in line or 'Recommended Action' in line:
                         tactics_section = False
 
             logger.info(f"Parsed {len(analysis['tactics'])} tactics from Gemini response")

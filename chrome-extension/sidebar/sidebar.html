@@ -23,9 +23,14 @@
                 <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
                 <h1>PhishGuard 360</h1>
             </div>
-            <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">
-                <span class="material-icons">close</span>
-            </button>
+            <div class="header-actions">
+                <button class="header-btn" id="viewHistoryBtn" aria-label="View scan history">
+                    <span class="material-icons">history</span>
+                </button>
+                <button class="close-btn" id="closeSidebar" aria-label="Close sidebar">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
         </header>
 
         <!-- Scan Status -->
@@ -127,7 +132,7 @@
         <!-- Final Verdict -->
         <div class="final-verdict" id="finalVerdict" style="display: none;">
             <div class="verdict-content">
-                <div class="verdict-header">
+                <div class="verdict-header" style="cursor: pointer;" onclick="phishguardSidebar.toggleVerdictDetails()">
                     <div class="verdict-icon-wrapper" id="verdictIconWrapper">
                         <span class="material-icons" id="verdictIcon">shield</span>
                     </div>
@@ -135,8 +140,11 @@
                         <h2 id="verdictTitle">Scan Complete</h2>
                         <p id="verdictMessage">Email analysis finished</p>
                     </div>
+                    <button class="collapse-btn" id="verdictCollapseBtn" aria-label="Toggle verdict details">
+                        <span class="material-icons">expand_less</span>
+                    </button>
                 </div>
-                <div class="verdict-score">
+                <div class="verdict-score" id="verdictScoreSection">
                     <div class="score-display">
                         <div class="score-circle" id="scoreCircle">
                             <svg class="score-ring" viewBox="0 0 120 120">

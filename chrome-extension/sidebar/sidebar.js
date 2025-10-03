@@ -59,29 +59,37 @@ class PhishGuardSidebar {
         this.closeBtn.addEventListener('click', () => {
             this.closeSidebar();
         });
-        
+
+        // View history button
+        const viewHistoryBtn = document.getElementById('viewHistoryBtn');
+        if (viewHistoryBtn) {
+            viewHistoryBtn.addEventListener('click', () => {
+                this.openHistory();
+            });
+        }
+
         // Layer card clicks for expanding details
         document.getElementById('layer1').addEventListener('click', () => {
             this.toggleLayerDetails('layer1');
         });
-        
+
         document.getElementById('layer2').addEventListener('click', () => {
             this.toggleLayerDetails('layer2');
         });
-        
+
         document.getElementById('layer3').addEventListener('click', () => {
             this.toggleLayerDetails('layer3');
         });
-        
+
         // Action button clicks
         this.markSafeBtn.addEventListener('click', () => {
             this.markEmailAsSafe();
         });
-        
+
         this.reportPhishBtn.addEventListener('click', () => {
             this.reportPhishing();
         });
-        
+
         this.blockSenderBtn.addEventListener('click', () => {
             this.blockSender();
         });
@@ -120,11 +128,19 @@ class PhishGuardSidebar {
             this.emailSender.textContent = emailData.sender;
         }
         if (emailData.subject) {
-            this.emailSubject.textContent = emailData.subject;
+            const fullSubject = emailData.subject;
+            const truncatedSubject = this.truncateSubject(fullSubject, 50);
+            this.emailSubject.textContent = truncatedSubject;
+            this.emailSubject.title = fullSubject; // Tooltip with full subject
         }
         if (emailData.date) {
             this.emailDate.textContent = new Date(emailData.date).toLocaleString();
         }
+    }
+
+    truncateSubject(text, maxLength) {
+        if (!text || text.length <= maxLength) return text;
+        return text.substring(0, maxLength - 3) + '...';
     }
     
     resetScanUI() {
@@ -670,6 +686,25 @@ class PhishGuardSidebar {
         const isVisible = details.style.display === 'block';
         details.style.display = isVisible ? 'none' : 'block';
     }
+
+    toggleVerdictDetails() {
+        const verdictScore = document.getElementById('verdictScoreSection');
+        const collapseBtn = document.getElementById('verdictCollapseBtn');
+
+        if (!verdictScore || !collapseBtn) return;
+
+        const isVisible = verdictScore.style.display !== 'none';
+
+        if (isVisible) {
+            // Collapse
+            verdictScore.style.display = 'none';
+            collapseBtn.querySelector('.material-icons').textContent = 'expand_more';
+        } else {
+            // Expand
+            verdictScore.style.display = 'flex';
+            collapseBtn.querySelector('.material-icons').textContent = 'expand_less';
+        }
+    }
     
     markEmailAsSafe() {
         this.sendActionToBackground('MARK_SAFE', {
@@ -747,6 +782,15 @@ class PhishGuardSidebar {
         window.parent.postMessage({
             type: 'CLOSE_SIDEBAR'
         }, '*');
+    }
+
+    openHistory() {
+        // Open history page in a new tab
+        if (window.chrome && chrome.runtime) {
+            chrome.runtime.sendMessage({
+                type: 'OPEN_HISTORY_PAGE'
+            });
+        }
     }
 }
 

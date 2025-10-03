@@ -222,6 +222,13 @@ class PhishGuardBackground {
                     sendResponse({ success: true });
                     break;
 
+                case 'OPEN_HISTORY_PAGE':
+                    chrome.tabs.create({
+                        url: chrome.runtime.getURL('pages/history.html')
+                    });
+                    sendResponse({ success: true });
+                    break;
+
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' });
             }

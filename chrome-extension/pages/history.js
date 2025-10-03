@@ -70,6 +70,8 @@ class ScanHistoryManager {
 
         // Refresh button
         this.refreshBtn.addEventListener('click', () => {
+            // Clear URL parameters when refreshing
+            window.history.replaceState({}, document.title, window.location.pathname);
             this.loadHistory();
         });
 
@@ -143,6 +145,17 @@ class ScanHistoryManager {
                 this.updateStatistics();
                 this.applyFilters();
                 this.showTable();
+
+                // Check if we need to open a specific scan from URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const scanId = urlParams.get('scanId');
+                if (scanId) {
+                    const scan = this.allScans.find(s => s.scanId === scanId);
+                    if (scan) {
+                        // Small delay to ensure table is rendered
+                        setTimeout(() => this.showDetails(scan), 300);
+                    }
+                }
             }
 
         } catch (error) {
@@ -517,23 +530,30 @@ class ScanHistoryManager {
                         <p style="margin-bottom: 4px;"><strong>Impersonation Risk:</strong> ${layer.impersonation_risk || 'N/A'}</p>
                         <p style="margin-bottom: 4px;"><strong>Personal Context:</strong> ${layer.personal_context || 'N/A'}</p>
                         ${layer.detailed_analysis ? `
-                            <div style="margin-top: 12px;">
-                                <strong>Detailed Analysis:</strong>
-                                <p style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; white-space: pre-wrap; color: #4a5568; font-size: 14px;">${layer.detailed_analysis}</p>
+                            <div style="margin-top: 16px;">
+                                <strong style="font-size: 15px; color: #1f2937;">Detailed Analysis:</strong>
+                                <div style="margin-top: 10px; padding: 16px; background: white; border-radius: 8px; border-left: 4px solid #6366f1; color: #4a5568; font-size: 14px; line-height: 1.7;">
+                                    ${this.formatDetailedAnalysis(layer.detailed_analysis)}
+                                </div>
                             </div>
                         ` : ''}
                         ${layer.recommended_action ? `
-                            <div style="margin-top: 12px;">
-                                <strong>Recommended Action:</strong>
-                                <p style="margin-top: 8px; padding: 12px; background: white; border-radius: 6px; color: #4a5568; font-size: 14px;">${layer.recommended_action}</p>
+                            <div style="margin-top: 16px;">
+                                <strong style="font-size: 15px; color: #1f2937;">Recommended Action:</strong>
+                                <p style="margin-top: 10px; padding: 16px; background: #e7f3ff; border-radius: 8px; border-left: 4px solid #2196f3; color: #1e40af; font-size: 14px; line-height: 1.6;">${layer.recommended_action}</p>
                             </div>
                         ` : ''}
                         ${layer.tactics_identified && layer.tactics_identified.length > 0 ? `
-                            <div style="margin-top: 12px;">
-                                <strong>Tactics Identified:</strong>
-                                <ul style="margin-top: 8px; padding-left: 20px; color: #4a5568; font-size: 14px;">
-                                    ${layer.tactics_identified.map(tactic => `<li style="margin-bottom: 4px;">${tactic}</li>`).join('')}
-                                </ul>
+                            <div style="margin-top: 16px;">
+                                <strong style="font-size: 15px; color: #1f2937;">Tactics Identified (${layer.tactics_identified.length}):</strong>
+                                <div style="margin-top: 10px; padding: 12px; background: white; border-radius: 8px; border-left: 4px solid #d97706;">
+                                    ${layer.tactics_identified.map((tactic, idx) => `
+                                        <div style="margin-bottom: 12px; padding: 12px; background: #fffbeb; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                                            <strong style="color: #92400e; font-size: 13px;">${idx + 1}.</strong>
+                                            <span style="color: #78350f; font-size: 14px; line-height: 1.6; margin-left: 6px;">${tactic}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
                             </div>
                         ` : ''}
                     </div>
@@ -575,6 +595,28 @@ class ScanHistoryManager {
     truncateText(text, maxLength) {
         if (text.length <= maxLength) return text;
         return text.substring(0, maxLength - 3) + '...';
+    }
+
+    formatDetailedAnalysis(text) {
+        // Convert markdown **bold** to HTML
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        // Split into sentences and group them into readable paragraphs
+        const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+        // Group sentences into paragraphs (2-3 sentences each)
+        const paragraphs = [];
+        for (let i = 0; i < sentences.length; i += 2) {
+            const paragraph = sentences.slice(i, i + 2).join(' ').trim();
+            if (paragraph) {
+                paragraphs.push(paragraph);
+            }
+        }
+
+        // Format as HTML paragraphs
+        return paragraphs.map(p =>
+            `<p style="margin-bottom: 12px; line-height: 1.7;">${p}</p>`
+        ).join('');
     }
 
     showLoading() {
