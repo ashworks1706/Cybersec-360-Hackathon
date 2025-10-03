@@ -480,3 +480,112 @@ input:checked + .slider:before {
 .scan-list::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-400);
 }
+
+/* ============================================
+   NAVIGATION SECTION STYLES
+   ============================================ */
+.navigation-section {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-gray-200);
+}
+
+.navigation-section h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-700);
+    margin: 0 0 var(--spacing-md) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.navigation-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-md);
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    font-family: var(--font-family);
+    color: var(--color-gray-800);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-btn:hover {
+    background: var(--color-gray-50);
+    border-color: var(--color-gray-300);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nav-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-btn .material-icons {
+    font-size: 24px;
+    color: var(--color-gray-600);
+    margin-right: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+.nav-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.nav-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-gray-900);
+}
+
+.nav-desc {
+    font-size: 0.75rem;
+    color: var(--color-gray-500);
+    line-height: 1.3;
+}
+
+.nav-btn .arrow {
+    font-size: 20px;
+    color: var(--color-gray-400);
+    margin-left: var(--spacing-sm);
+    transition: transform 0.2s ease;
+}
+
+.nav-btn:hover .arrow {
+    transform: translateX(2px);
+    color: var(--color-gray-600);
+}
+
+/* Special styling for profile button */
+.nav-btn#profileBtn:hover {
+    border-color: var(--color-success);
+}
+
+.nav-btn#profileBtn:hover .material-icons {
+    color: var(--color-success);
+}
+
+/* Special styling for dashboard button */
+.nav-btn#dashboardBtn:hover {
+    border-color: #3b82f6;
+}
+
+.nav-btn#dashboardBtn:hover .material-icons {
+    color: #3b82f6;
+}

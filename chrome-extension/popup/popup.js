@@ -210,6 +210,22 @@ class PhishGuardPopup {
             this.openHistoryPage();
         });
         
+        // Navigation buttons
+        const profileBtn = document.getElementById('profileBtn');
+        const dashboardBtn = document.getElementById('dashboardBtn');
+        
+        if (profileBtn) {
+            profileBtn.addEventListener('click', () => {
+                this.openProfilePage();
+            });
+        }
+        
+        if (dashboardBtn) {
+            dashboardBtn.addEventListener('click', () => {
+                this.openDashboardPage();
+            });
+        }
+        
         // Settings toggles
         this.autoScanToggle.addEventListener('change', () => {
             this.updateSetting('autoScanMode', this.autoScanToggle.checked);
@@ -380,6 +396,18 @@ class PhishGuardPopup {
     openScanInHistory(scanId) {
         chrome.tabs.create({
             url: chrome.runtime.getURL(`pages/history.html?scanId=${scanId}`)
+        });
+    }
+    
+    openProfilePage() {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('pages/profile.html')
+        });
+    }
+    
+    openDashboardPage() {
+        chrome.tabs.create({
+            url: chrome.runtime.getURL('pages/dashboard.html')
         });
     }
     

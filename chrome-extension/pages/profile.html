@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard 360 - User Profile</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="stylesheet" href="profile.css">
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Header -->
+        <header class="profile-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
+                    <h1>PhishGuard 360</h1>
+                </div>
+                <div class="header-subtitle">
+                    <h2>User Profile & Security Settings</h2>
+                    <p>Configure your personal information for better protection</p>
+                </div>
+            </div>
+            <button class="back-btn" id="backBtn">
+                <span class="material-icons">arrow_back</span>
+                Back to Main
+            </button>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="personal">
+                <span class="material-icons">person</span>
+                Personal Info
+            </button>
+            <button class="tab-btn" data-tab="contacts">
+                <span class="material-icons">contacts</span>
+                Trusted Contacts
+            </button>
+            <button class="tab-btn" data-tab="organizations">
+                <span class="material-icons">business</span>
+                Organizations
+            </button>
+            <button class="tab-btn" data-tab="security">
+                <span class="material-icons">security</span>
+                Security Settings
+            </button>
+        </div>
+
+        <!-- Personal Information Tab -->
+        <div class="tab-content active" id="personal-tab">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="material-icons">account_circle</span>
+                    <h3>Personal Information</h3>
+                    <p>Help us understand your profile for better protection</p>
+                </div>
+                
+                <form id="personalInfoForm" class="form-content">
+                    <div class="form-group">
+                        <label for="ageGroup">Age Group</label>
+                        <select id="ageGroup" name="age_group">
+                            <option value="unknown">Prefer not to say</option>
+                            <option value="18-25">18-25</option>
+                            <option value="26-35">26-35</option>
+                            <option value="36-45">36-45</option>
+                            <option value="46-55">46-55</option>
+                            <option value="56-65">56-65</option>
+                            <option value="65+">65+</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="occupation">Occupation</label>
+                        <select id="occupation" name="occupation">
+                            <option value="unknown">Prefer not to say</option>
+                            <option value="student">Student</option>
+                            <option value="technology">Technology/IT</option>
+                            <option value="finance">Finance/Banking</option>
+                            <option value="healthcare">Healthcare</option>
+                            <option value="education">Education</option>
+                            <option value="government">Government</option>
+                            <option value="business">Business/Management</option>
+                            <option value="retail">Retail/Service</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="techSavviness">Technical Experience Level</label>
+                        <select id="techSavviness" name="tech_savviness">
+                            <option value="beginner">Beginner - New to computers/internet</option>
+                            <option value="basic">Basic - Can use email and browse web</option>
+                            <option value="intermediate">Intermediate - Comfortable with technology</option>
+                            <option value="advanced">Advanced - Very tech-savvy</option>
+                            <option value="expert">Expert - IT/Security professional</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="emailUsage">Primary Email Usage</label>
+                        <select id="emailUsage" name="primary_email_usage">
+                            <option value="personal">Personal use only</option>
+                            <option value="business">Business use only</option>
+                            <option value="mixed">Both personal and business</option>
+                            <option value="student">Student email</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="save-btn">
+                        <span class="material-icons">save</span>
+                        Save Personal Information
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Trusted Contacts Tab -->
+        <div class="tab-content" id="contacts-tab">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="material-icons">group</span>
+                    <h3>Trusted Contacts</h3>
+                    <p>Add people you frequently communicate with to improve impersonation detection</p>
+                </div>
+
+                <div class="add-contact-form">
+                    <div class="input-group">
+                        <input type="text" id="contactName" placeholder="Contact Name" class="contact-input">
+                        <input type="email" id="contactEmail" placeholder="Email Address" class="contact-input">
+                        <select id="contactRelation" class="contact-input">
+                            <option value="colleague">Colleague</option>
+                            <option value="friend">Friend</option>
+                            <option value="family">Family</option>
+                            <option value="business">Business Contact</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button id="addContactBtn" class="add-btn">
+                            <span class="material-icons">add</span>
+                            Add
+                        </button>
+                    </div>
+                </div>
+
+                <div class="contacts-list" id="contactsList">
+                    <div class="empty-state">
+                        <span class="material-icons">person_add</span>
+                        <p>No trusted contacts added yet</p>
+                        <span>Add contacts to help detect impersonation attempts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Organizations Tab -->
+        <div class="tab-content" id="organizations-tab">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="material-icons">domain</span>
+                    <h3>Trusted Organizations</h3>
+                    <p>Add organizations you work with or trust to improve phishing detection</p>
+                </div>
+
+                <div class="add-org-form">
+                    <div class="input-group">
+                        <input type="text" id="orgName" placeholder="Organization Name" class="org-input">
+                        <input type="text" id="orgDomain" placeholder="Domain (e.g., company.com)" class="org-input">
+                        <select id="orgType" class="org-input">
+                            <option value="employer">Employer</option>
+                            <option value="bank">Bank/Financial</option>
+                            <option value="healthcare">Healthcare Provider</option>
+                            <option value="government">Government Agency</option>
+                            <option value="education">Educational Institution</option>
+                            <option value="vendor">Service Provider/Vendor</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <button id="addOrgBtn" class="add-btn">
+                            <span class="material-icons">add</span>
+                            Add
+                        </button>
+                    </div>
+                </div>
+
+                <div class="organizations-list" id="organizationsList">
+                    <div class="empty-state">
+                        <span class="material-icons">add_business</span>
+                        <p>No trusted organizations added yet</p>
+                        <span>Add organizations to reduce false positives from legitimate emails</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Security Settings Tab -->
+        <div class="tab-content" id="security-tab">
+            <div class="section-card">
+                <div class="section-header">
+                    <span class="material-icons">shield</span>
+                    <h3>Security Preferences</h3>
+                    <p>Configure how PhishGuard 360 protects you</p>
+                </div>
+
+                <form id="securitySettingsForm" class="form-content">
+                    <div class="form-group">
+                        <label for="securityLevel">Security Level</label>
+                        <select id="securityLevel" name="security_level">
+                            <option value="relaxed">Relaxed - Fewer warnings, minimal blocking</option>
+                            <option value="balanced">Balanced - Standard protection (Recommended)</option>
+                            <option value="strict">Strict - Maximum protection, more warnings</option>
+                            <option value="paranoid">Paranoid - Block everything suspicious</option>
+                        </select>
+                        <small>Higher levels may show more warnings but provide better protection</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notificationFreq">Notification Frequency</label>
+                        <select id="notificationFreq" name="notification_frequency">
+                            <option value="all">All notifications</option>
+                            <option value="threats_only">Threats only</option>
+                            <option value="critical_only">Critical threats only</option>
+                            <option value="none">No notifications</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="autoScan" name="auto_scan" checked>
+                            <span class="checkmark"></span>
+                            <span>Automatically scan emails</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="learningMode" name="learning_mode" checked>
+                            <span class="checkmark"></span>
+                            <span>Allow learning from my email patterns</span>
+                        </label>
+                        <small>Helps improve personalized protection over time</small>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="shareThreats" name="share_threat_intelligence" checked>
+                            <span class="checkmark"></span>
+                            <span>Share anonymous threat data to improve protection for everyone</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="save-btn">
+                        <span class="material-icons">save</span>
+                        Save Security Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Success Message -->
+        <div class="success-message" id="successMessage">
+            <span class="material-icons">check_circle</span>
+            <span>Settings saved successfully!</span>
+        </div>
+    </div>
+
+    <script src="profile.js"></script>
+</body>
+</html>

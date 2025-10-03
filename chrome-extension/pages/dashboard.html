@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhishGuard 360 - Security Dashboard</title>
+
+    <!-- Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <header class="dashboard-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <img src="../assets/logo.png" class="logo-img" alt="PhishGuard 360">
+                    <div>
+                        <h1>PhishGuard 360</h1>
+                        <p>Security Dashboard</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="refresh-btn" id="refreshBtn">
+                        <span class="material-icons">refresh</span>
+                        Refresh
+                    </button>
+                    <button class="back-btn" id="backBtn">
+                        <span class="material-icons">arrow_back</span>
+                        Back
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Protection Status -->
+        <div class="status-banner" id="statusBanner">
+            <div class="status-icon">
+                <span class="material-icons">shield</span>
+            </div>
+            <div class="status-content">
+                <h2>Protection Active</h2>
+                <p>Your emails are being monitored by all three security layers</p>
+            </div>
+            <div class="status-indicator active" id="statusIndicator"></div>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-icon safe">
+                    <span class="material-icons">check_circle</span>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="totalScans">0</div>
+                    <div class="metric-label">Total Scans</div>
+                    <div class="metric-change">+12 this week</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon threat">
+                    <span class="material-icons">dangerous</span>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="threatsBlocked">0</div>
+                    <div class="metric-label">Threats Blocked</div>
+                    <div class="metric-change" id="threatChange">+0 this week</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon warning">
+                    <span class="material-icons">warning</span>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="suspiciousEmails">0</div>
+                    <div class="metric-label">Suspicious Detected</div>
+                    <div class="metric-change" id="suspiciousChange">+0 this week</div>
+                </div>
+            </div>
+
+            <div class="metric-card">
+                <div class="metric-icon protection">
+                    <span class="material-icons">security</span>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="protectionScore">--</div>
+                    <div class="metric-label">Protection Score</div>
+                    <div class="metric-change" id="scoreChange">Excellent</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity & Threat Analysis -->
+        <div class="content-grid">
+            <!-- Recent Activity -->
+            <div class="activity-card">
+                <div class="card-header">
+                    <h3>
+                        <span class="material-icons">history</span>
+                        Recent Activity
+                    </h3>
+                    <button class="view-all-btn" onclick="window.open('history.html', '_blank')">View All</button>
+                </div>
+                <div class="activity-list" id="recentActivity">
+                    <div class="empty-state">
+                        <span class="material-icons">email</span>
+                        <p>No recent activity</p>
+                        <span>Email scans will appear here</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threat Analysis -->
+            <div class="threats-card">
+                <div class="card-header">
+                    <h3>
+                        <span class="material-icons">bug_report</span>
+                        Recent Threats
+                    </h3>
+                    <span class="threat-count" id="threatCount">0 detected</span>
+                </div>
+                <div class="threats-list" id="recentThreats">
+                    <div class="empty-state">
+                        <span class="material-icons">verified_user</span>
+                        <p>No threats detected</p>
+                        <span>Great! Your inbox is secure</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Profile Summary -->
+            <div class="profile-card">
+                <div class="card-header">
+                    <h3>
+                        <span class="material-icons">account_circle</span>
+                        Profile Summary
+                    </h3>
+                    <button class="edit-profile-btn" onclick="window.open('profile.html', '_blank')">
+                        <span class="material-icons">edit</span>
+                        Edit
+                    </button>
+                </div>
+                <div class="profile-content" id="profileSummary">
+                    <div class="profile-item">
+                        <span class="profile-label">Tech Level:</span>
+                        <span class="profile-value" id="techLevel">Intermediate</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Trusted Contacts:</span>
+                        <span class="profile-value" id="contactsCount">0</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Organizations:</span>
+                        <span class="profile-value" id="organizationsCount">0</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="profile-label">Security Level:</span>
+                        <span class="profile-value" id="securityLevel">Balanced</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Layer Performance -->
+            <div class="layers-card">
+                <div class="card-header">
+                    <h3>
+                        <span class="material-icons">layers</span>
+                        Layer Performance
+                    </h3>
+                    <div class="performance-indicator" id="performanceIndicator">
+                        <span class="indicator-dot active"></span>
+                        <span>All Systems Active</span>
+                    </div>
+                </div>
+                <div class="layers-content">
+                    <div class="layer-item">
+                        <div class="layer-info">
+                            <span class="layer-name">Layer 1 - Pattern Detection</span>
+                            <span class="layer-stats" id="layer1Stats">~1-3ms response</span>
+                        </div>
+                        <div class="layer-status active" id="layer1Status">
+                            <span class="material-icons">check_circle</span>
+                        </div>
+                    </div>
+                    
+                    <div class="layer-item">
+                        <div class="layer-info">
+                            <span class="layer-name">Layer 2 - AI Classification</span>
+                            <span class="layer-stats" id="layer2Stats">~20-50ms response</span>
+                        </div>
+                        <div class="layer-status active" id="layer2Status">
+                            <span class="material-icons">check_circle</span>
+                        </div>
+                    </div>
+                    
+                    <div class="layer-item">
+                        <div class="layer-info">
+                            <span class="layer-name">Layer 3 - Detective Analysis</span>
+                            <span class="layer-stats" id="layer3Stats">~15-30s response</span>
+                        </div>
+                        <div class="layer-status active" id="layer3Status">
+                            <span class="material-icons">check_circle</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-btn primary" onclick="chrome.tabs.create({url: 'https://mail.google.com'})">
+                <span class="material-icons">email</span>
+                Open Gmail
+            </button>
+            <button class="action-btn secondary" onclick="window.open('profile.html', '_blank')">
+                <span class="material-icons">settings</span>
+                Settings
+            </button>
+            <button class="action-btn secondary" onclick="window.open('history.html', '_blank')">
+                <span class="material-icons">history</span>
+                Full History
+            </button>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>

@@ -93,6 +93,166 @@ class PhishGuardBackend:
             except Exception as e:
                 logger.error(f"Failed to get user experience: {str(e)}")
                 return jsonify({'error': 'Failed to retrieve user data'}), 500
+
+        @self.app.route('/api/user/<user_id>/profile', methods=['POST', 'PUT'])
+        def update_user_profile(user_id):
+            """Update user profile information"""
+            try:
+                if not request.is_json:
+                    return jsonify({'error': 'Request must be JSON'}), 400
+                
+                profile_data = request.get_json()
+                
+                # Get existing experience data
+                existing_experience = self.rag_db.get_user_experience(user_id)
+                
+                # Update with new profile data
+                existing_experience.update(profile_data)
+                
+                # Save updated profile
+                self.rag_db.update_user_experience(user_id, existing_experience)
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': 'User profile updated successfully',
+                    'user_id': user_id
+                })
+                
+            except Exception as e:
+                logger.error(f"Failed to update user profile: {str(e)}")
+                return jsonify({'error': 'Failed to update user profile'}), 500
+
+        @self.app.route('/api/user/<user_id>/contacts', methods=['POST'])
+        def add_user_contacts(user_id):
+            """Add contacts to user profile"""
+            try:
+                if not request.is_json:
+                    return jsonify({'error': 'Request must be JSON'}), 400
+                
+                contacts_data = request.get_json()
+                contacts = contacts_data.get('contacts', [])
+                
+                # Get existing experience data
+                experience = self.rag_db.get_user_experience(user_id)
+                
+                # Add new contacts (avoiding duplicates)
+                existing_contacts = experience.get('contacts', [])
+                existing_emails = {contact.get('email', '').lower() for contact in existing_contacts}
+                
+                new_contacts = []
+                for contact in contacts:
+                    if contact.get('email', '').lower() not in existing_emails:
+                        new_contacts.append(contact)
+                        existing_emails.add(contact.get('email', '').lower())
+                
+                experience['contacts'].extend(new_contacts)
+                
+                # Save updated profile
+                self.rag_db.update_user_experience(user_id, experience)
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Added {len(new_contacts)} new contacts',
+                    'contacts_added': len(new_contacts),
+                    'total_contacts': len(experience['contacts'])
+                })
+                
+            except Exception as e:
+                logger.error(f"Failed to add user contacts: {str(e)}")
+                return jsonify({'error': 'Failed to add contacts'}), 500
+
+        @self.app.route('/api/user/<user_id>/organizations', methods=['POST'])
+        def add_user_organizations(user_id):
+            """Add trusted organizations to user profile"""
+            try:
+                if not request.is_json:
+                    return jsonify({'error': 'Request must be JSON'}), 400
+                
+                org_data = request.get_json()
+                organizations = org_data.get('organizations', [])
+                
+                # Get existing experience data
+                experience = self.rag_db.get_user_experience(user_id)
+                
+                # Add new organizations (avoiding duplicates)
+                existing_orgs = experience.get('organizations', [])
+                existing_domains = {org.get('domain', '').lower() for org in existing_orgs}
+                
+                new_orgs = []
+                for org in organizations:
+                    if org.get('domain', '').lower() not in existing_domains:
+                        new_orgs.append(org)
+                        existing_domains.add(org.get('domain', '').lower())
+                
+                experience['organizations'].extend(new_orgs)
+                
+                # Save updated profile
+                self.rag_db.update_user_experience(user_id, experience)
+                
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Added {len(new_orgs)} new organizations',
+                    'organizations_added': len(new_orgs),
+                    'total_organizations': len(experience['organizations'])
+                })
+                
+            except Exception as e:
+                logger.error(f"Failed to add user organizations: {str(e)}")
+                return jsonify({'error': 'Failed to add organizations'}), 500
+
+        @self.app.route('/api/user/<user_id>/dashboard', methods=['GET'])
+        def get_user_dashboard(user_id):
+            """Get comprehensive user dashboard data"""
+            try:
+                # Get user experience
+                experience = self.rag_db.get_user_experience(user_id)
+                
+                # Get scan history summary
+                scan_history = self.rag_db.get_scan_history(user_id, limit=100)
+                
+                # Calculate statistics
+                total_scans = len(scan_history)
+                threats_blocked = len([scan for scan in scan_history if scan.get('final_verdict') == 'threat'])
+                suspicious_detected = len([scan for scan in scan_history if scan.get('final_verdict') == 'suspicious'])
+                safe_emails = len([scan for scan in scan_history if scan.get('final_verdict') == 'safe'])
+                
+                # Calculate risk metrics
+                if total_scans > 0:
+                    threat_percentage = (threats_blocked / total_scans) * 100
+                    risk_level = 'high' if threat_percentage > 20 else 'medium' if threat_percentage > 5 else 'low'
+                else:
+                    threat_percentage = 0
+                    risk_level = 'unknown'
+                
+                # Recent threats analysis
+                recent_threats = [scan for scan in scan_history[-10:] if scan.get('final_verdict') in ['threat', 'suspicious']]
+                
+                dashboard_data = {
+                    'user_profile': {
+                        'user_id': user_id,
+                        'personal_info': experience.get('personal_info', {}),
+                        'contacts_count': len(experience.get('contacts', [])),
+                        'organizations_count': len(experience.get('organizations', [])),
+                        'risk_profile': experience.get('risk_profile', {})
+                    },
+                    'scan_statistics': {
+                        'total_scans': total_scans,
+                        'threats_blocked': threats_blocked,
+                        'suspicious_detected': suspicious_detected,
+                        'safe_emails': safe_emails,
+                        'threat_percentage': round(threat_percentage, 1),
+                        'risk_level': risk_level
+                    },
+                    'recent_activity': scan_history[-5:] if scan_history else [],
+                    'recent_threats': recent_threats,
+                    'protection_status': 'active' if total_scans > 0 else 'inactive'
+                }
+                
+                return jsonify(dashboard_data)
+                
+            except Exception as e:
+                logger.error(f"Failed to get user dashboard: {str(e)}")
+                return jsonify({'error': 'Failed to retrieve dashboard data'}), 500
         
         @self.app.route('/api/suspect', methods=['POST'])
         def post_suspect_info():
