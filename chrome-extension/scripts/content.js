@@ -529,11 +529,14 @@ if (window.phishGuardInitialized) {
     
     injectSidebar() {
         if (this.sidebarInjected) {
+            console.log('PhishGuard: Sidebar already injected, showing it');
             this.showSidebar();
             // Send email data again when reshowing
-            this.sendEmailDataToSidebar();
+            setTimeout(() => this.sendEmailDataToSidebar(), 500);
             return;
         }
+
+        console.log('PhishGuard: Injecting sidebar for the first time');
 
         const sidebarContainer = document.createElement('div');
         sidebarContainer.id = 'phishguard-sidebar';
@@ -548,22 +551,43 @@ if (window.phishGuardInitialized) {
         document.body.appendChild(sidebarContainer);
         this.sidebarInjected = true;
 
-        // CRITICAL: Explicitly show the sidebar immediately after injection
-        this.showSidebar();
-
-        // Wait for iframe to load before sending data
+        // Wait for iframe to load before showing and sending data
         const iframe = sidebarContainer.querySelector('iframe');
         iframe.addEventListener('load', () => {
-            console.log('PhishGuard: Sidebar iframe loaded');
-            this.sendEmailDataToSidebar();
+            console.log('PhishGuard: Sidebar iframe loaded, showing sidebar and sending data');
+            // Show sidebar after iframe loads
+            this.showSidebar();
+            // Send email data with a small delay to ensure sidebar is ready
+            setTimeout(() => {
+                this.sendEmailDataToSidebar();
+            }, 100);
         });
+
+        // Fallback: show sidebar even if iframe load event doesn't fire
+        setTimeout(() => {
+            if (!sidebarContainer.classList.contains('phishguard-sidebar-visible')) {
+                console.log('PhishGuard: Fallback - showing sidebar after timeout');
+                this.showSidebar();
+                this.sendEmailDataToSidebar();
+            }
+        }, 2000);
     }
 
     showSidebar() {
         const sidebar = document.querySelector('#phishguard-sidebar');
         if (sidebar) {
+            console.log('PhishGuard: Showing sidebar');
             sidebar.style.display = 'block';
             sidebar.classList.add('phishguard-sidebar-visible');
+            
+            // Force a reflow to ensure the animation triggers
+            sidebar.offsetHeight;
+            
+            // Add some debugging
+            console.log('PhishGuard: Sidebar classes:', sidebar.className);
+            console.log('PhishGuard: Sidebar style:', sidebar.style.cssText);
+        } else {
+            console.error('PhishGuard: Sidebar element not found!');
         }
     }
 

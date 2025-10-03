@@ -76,12 +76,44 @@ class PhishGuardSidebar {
             });
         });
 
-        // Verdict header click
-        const verdictHeader = document.getElementById('verdictHeader');
-        if (verdictHeader) {
-            verdictHeader.addEventListener('click', () => {
+        // Set up collapse button event listener with multiple approaches
+        const collapseBtn = document.getElementById('verdictCollapseBtn');
+        if (collapseBtn) {
+            console.log('Setting up collapse button event listener');
+            
+            // Primary click handler
+            collapseBtn.addEventListener('click', (e) => {
+                console.log('Collapse button clicked!');
+                e.preventDefault();
+                e.stopPropagation();
                 this.toggleVerdictDetails();
             });
+
+            // Fallback: mousedown event
+            collapseBtn.addEventListener('mousedown', (e) => {
+                console.log('Collapse button mousedown!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleVerdictDetails();
+            });
+
+            // Fallback: touchstart for mobile
+            collapseBtn.addEventListener('touchstart', (e) => {
+                console.log('Collapse button touchstart!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggleVerdictDetails();
+            });
+
+            // Test if the button is properly set up
+            console.log('Collapse button setup complete:', {
+                element: collapseBtn,
+                hasClickListener: collapseBtn.onclick !== null,
+                classes: collapseBtn.className,
+                style: collapseBtn.style.cssText
+            });
+        } else {
+            console.error('Collapse button not found!');
         }
 
         // Action button clicks
@@ -691,22 +723,55 @@ class PhishGuardSidebar {
     }
 
     toggleVerdictDetails() {
+        console.log('toggleVerdictDetails called');
+        
         const verdictScore = document.getElementById('verdictScoreSection');
         const collapseBtn = document.getElementById('verdictCollapseBtn');
 
-        if (!verdictScore || !collapseBtn) return;
+        console.log('verdictScore element:', verdictScore);
+        console.log('collapseBtn element:', collapseBtn);
 
-        const isVisible = verdictScore.style.display !== 'none';
+        if (!verdictScore) {
+            console.error('verdictScoreSection element not found!');
+            return;
+        }
+        
+        if (!collapseBtn) {
+            console.error('verdictCollapseBtn element not found!');
+            return;
+        }
+
+        const icon = collapseBtn.querySelector('.material-icons');
+        if (!icon) {
+            console.error('Material icon inside collapse button not found!');
+            return;
+        }
+
+        // Check current state more reliably
+        const isVisible = verdictScore.style.display !== 'none' && 
+                         verdictScore.style.display !== '' && 
+                         verdictScore.offsetHeight > 0;
+
+        console.log('Current visibility state:', isVisible);
+        console.log('Current display style:', verdictScore.style.display);
 
         if (isVisible) {
             // Collapse
             verdictScore.style.display = 'none';
-            collapseBtn.querySelector('.material-icons').textContent = 'expand_more';
+            icon.textContent = 'expand_more';
+            console.log('✅ Verdict details collapsed');
         } else {
             // Expand
             verdictScore.style.display = 'flex';
-            collapseBtn.querySelector('.material-icons').textContent = 'expand_less';
+            icon.textContent = 'expand_less';
+            console.log('✅ Verdict details expanded');
         }
+        
+        // Verify the change
+        setTimeout(() => {
+            console.log('After toggle - display style:', verdictScore.style.display);
+            console.log('After toggle - icon text:', icon.textContent);
+        }, 100);
     }
     
     markEmailAsSafe() {
@@ -799,5 +864,15 @@ class PhishGuardSidebar {
 
 // Initialize sidebar when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new PhishGuardSidebar();
+    window.phishGuardSidebar = new PhishGuardSidebar();
+    
+    // Add global test function for debugging
+    window.testToggle = () => {
+        console.log('Testing toggle function...');
+        if (window.phishGuardSidebar) {
+            window.phishGuardSidebar.toggleVerdictDetails();
+        } else {
+            console.error('PhishGuard sidebar not found');
+        }
+    };
 });
