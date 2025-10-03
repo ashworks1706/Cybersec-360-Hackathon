@@ -100,11 +100,11 @@ class PhishGuardDemo:
         </div>
         
         <div class="nav-buttons">
-            <button class="nav-btn" onclick="window.location.href='/'">
+            <button class="nav-btn" id="dashboardBtn">
                 <span class="material-icons">dashboard</span>
                 API Dashboard
             </button>
-            <button class="nav-btn" onclick="window.location.href='/training.html'">
+            <button class="nav-btn" id="trainingBtn">
                 <span class="material-icons">model_training</span>
                 Model Training
             </button>
@@ -137,6 +137,16 @@ class PhishGuardDemo:
             </p>
         </div>
     </div>
+    
+    <script>
+        document.getElementById('dashboardBtn').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+        
+        document.getElementById('trainingBtn').addEventListener('click', function() {
+            window.location.href = '/training.html';
+        });
+    </script>
 </body>
 </html>'''
         
@@ -172,11 +182,11 @@ class PhishGuardDemo:
         </div>
         
         <div class="nav-buttons">
-            <button class="nav-btn" onclick="window.location.href='/'">
+            <button class="nav-btn" id="dashboardBtn">
                 <span class="material-icons">dashboard</span>
                 API Dashboard
             </button>
-            <button class="nav-btn" onclick="window.location.href='/documents.html'">
+            <button class="nav-btn" id="documentsBtn">
                 <span class="material-icons">description</span>
                 Documents
             </button>
@@ -211,6 +221,16 @@ class PhishGuardDemo:
             </p>
         </div>
     </div>
+    
+    <script>
+        document.getElementById('dashboardBtn').addEventListener('click', function() {
+            window.location.href = '/';
+        });
+        
+        document.getElementById('documentsBtn').addEventListener('click', function() {
+            window.location.href = '/documents.html';
+        });
+    </script>
 </body>
 </html>'''
         
