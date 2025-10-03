@@ -1,0 +1,87 @@
+# PhishGuard 360 - Development Docker Compose
+version: '3.8'
+
+services:
+  # ============================================
+  # Flask Backend Service (Development)
+  # ============================================
+  phishguard-backend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: phishguard-backend-dev
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - DATABASE_URL=sqlite:///database/data/phishguard_dev.db
+      - LOG_LEVEL=DEBUG
+      - API_RATE_LIMIT=1000
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - SECRET_KEY=dev-secret-key-change-in-production
+    volumes:
+      - ./flask-backend:/app:cached
+      - phishguard_dev_data:/app/database/data
+      - phishguard_dev_logs:/app/logs
+      - phishguard_dev_models:/app/models
+    networks:
+      - phishguard-dev-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # Redis Cache Service (Development)
+  # ============================================
+  redis-dev:
+    image: redis:7-alpine
+    container_name: phishguard-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - phishguard_dev_redis:/data
+    networks:
+      - phishguard-dev-network
+    command: redis-server --appendonly yes
+
+  # ============================================
+  # Database Management (Adminer)
+  # ============================================
+  adminer:
+    image: adminer:latest
+    container_name: phishguard-adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    networks:
+      - phishguard-dev-network
+    environment:
+      - ADMINER_DEFAULT_SERVER=sqlite
+
+# ============================================
+# Development Volumes
+# ============================================
+volumes:
+  phishguard_dev_data:
+    driver: local
+  phishguard_dev_logs:
+    driver: local
+  phishguard_dev_models:
+    driver: local
+  phishguard_dev_redis:
+    driver: local
+
+# ============================================
+# Development Networks
+# ============================================
+networks:
+  phishguard-dev-network:
+    driver: bridge
