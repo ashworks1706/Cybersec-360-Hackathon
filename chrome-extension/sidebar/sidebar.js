@@ -13,7 +13,7 @@ class PhishGuardSidebar {
         this.setupEventListeners();
         this.setupMessageListener();
 
-        console.log('🛡️ PhishGuard Sidebar initialized');
+        console.log('[PhishGuard] Sidebar initialized');
     }
     
     initializeElements() {
@@ -154,11 +154,11 @@ class PhishGuardSidebar {
     
     getStatusIcon(status) {
         const icons = {
-            pending: '<div class="status-icon">⏳</div>',
+            pending: '<i data-lucide="loader-2" class="status-icon pending"></i>',
             scanning: '<div class="spinner"></div>',
-            safe: '<div class="status-icon">✅</div>',
-            warning: '<div class="status-icon">⚠️</div>',
-            danger: '<div class="status-icon">❌</div>'
+            safe: '<i data-lucide="check-circle" class="status-icon safe"></i>',
+            warning: '<i data-lucide="alert-triangle" class="status-icon warning"></i>',
+            danger: '<i data-lucide="x-circle" class="status-icon danger"></i>'
         };
         return icons[status] || icons.pending;
     }
@@ -198,6 +198,11 @@ class PhishGuardSidebar {
         const statusElement = document.getElementById(`${layerId}Status`);
         statusElement.className = `layer-status ${status}`;
         statusElement.innerHTML = this.getStatusIcon(status);
+
+        // Reinitialize Lucide icons for the new icon
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
+        }
 
         if (message) {
             const layerCard = document.getElementById(layerId);
@@ -296,9 +301,9 @@ class PhishGuardSidebar {
     }
     
     handleScanResults(scanData) {
-        console.log('🔍 [DEBUG] Received scan results:', scanData);
-        console.log('🔍 [DEBUG] Scan data type:', typeof scanData);
-        console.log('🔍 [DEBUG] Has layers?', !!scanData.layers);
+        console.log('[DEBUG] Received scan results:', scanData);
+        console.log('[DEBUG] Scan data type:', typeof scanData);
+        console.log('[DEBUG] Has layers?', !!scanData.layers);
 
         this.currentScanData = scanData;
 
@@ -574,74 +579,89 @@ class PhishGuardSidebar {
         // Update the main status title and message
         this.statusTitle.textContent = 'Scan Complete';
 
+        // Get verdict icon wrapper for styling
+        const verdictIconWrapper = document.getElementById('verdictIconWrapper');
+
         if (verdict === 'safe') {
-            this.verdictIcon.textContent = '✅';
+            this.verdictIcon.setAttribute('data-lucide', 'shield-check');
             this.verdictTitle.textContent = 'Email is Safe';
             this.verdictMessage.textContent = 'No threats detected';
             this.statusIndicator.className = 'status-indicator safe';
             this.statusMessage.textContent = 'All security layers passed - email is safe';
+            if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper safe';
         } else if (verdict === 'threat') {
-            this.verdictIcon.textContent = '❌';
+            this.verdictIcon.setAttribute('data-lucide', 'shield-alert');
             this.verdictTitle.textContent = 'Threat Detected';
             this.verdictMessage.textContent = 'This email is malicious';
             this.statusIndicator.className = 'status-indicator danger';
             this.statusMessage.textContent = 'Security threat detected - do not interact with this email';
+            if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper danger';
         } else {
-            this.verdictIcon.textContent = '⚠️';
+            this.verdictIcon.setAttribute('data-lucide', 'shield-alert');
             this.verdictTitle.textContent = 'Potential Threat';
             this.verdictMessage.textContent = 'Exercise caution with this email';
             this.statusIndicator.className = 'status-indicator warning';
             this.statusMessage.textContent = 'Potential phishing attempt detected';
+            if (verdictIconWrapper) verdictIconWrapper.className = 'verdict-icon-wrapper warning';
+        }
+
+        // Reinitialize Lucide icons
+        if (typeof lucide !== 'undefined') {
+            lucide.createIcons();
         }
 
         // Calculate and display comprehensive risk score from all layers
-        console.log('🔍 [DEBUG] Calculating comprehensive risk score...');
+        console.log('[DEBUG] Calculating comprehensive risk score...');
         let riskScore = 0;
 
         // Priority 1: Use Layer 3's comprehensive risk_score if available
         if (scanData.layers?.layer3?.risk_score !== undefined) {
             riskScore = scanData.layers.layer3.risk_score;
-            console.log('🔍 [DEBUG] Using Layer 3 risk_score:', riskScore);
+            console.log('[DEBUG] Using Layer 3 risk_score:', riskScore);
         }
         // Priority 2: Calculate from confidence and Layer 3 SE score
         else if (scanData.layers?.layer3?.social_engineering_score !== undefined) {
             const seScore = scanData.layers.layer3.social_engineering_score;
             const confidenceScore = (scanData.confidence_score || 0) * 100;
             riskScore = Math.min(Math.round((confidenceScore + seScore) / 2), 100);
-            console.log('🔍 [DEBUG] Calculated risk_score from SE + confidence:', riskScore);
+            console.log('[DEBUG] Calculated risk_score from SE + confidence:', riskScore);
         }
         // Priority 3: Use confidence score alone
         else {
             riskScore = Math.round((scanData.confidence_score || 0) * 100);
-            console.log('🔍 [DEBUG] Using confidence_score as risk:', riskScore);
+            console.log('[DEBUG] Using confidence_score as risk:', riskScore);
         }
 
         // Update risk score display
         this.scoreValue.textContent = riskScore;
 
-        // Color code the risk score circle based on threat level
-        if (riskScore >= 80) {
-            // Critical threat - Red
-            this.scoreCircle.style.background = 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)';
-            console.log('🔴 [DEBUG] Risk level: CRITICAL (80-100)');
-        } else if (riskScore >= 60) {
-            // High risk - Orange/Red
-            this.scoreCircle.style.background = 'linear-gradient(135deg, #f97316 0%, #dc2626 100%)';
-            console.log('🟠 [DEBUG] Risk level: HIGH (60-79)');
-        } else if (riskScore >= 40) {
-            // Medium risk - Yellow/Orange
-            this.scoreCircle.style.background = 'linear-gradient(135deg, #facc15 0%, #f97316 100%)';
-            console.log('🟡 [DEBUG] Risk level: MEDIUM (40-59)');
-        } else {
-            // Low risk - Green/Blue
-            this.scoreCircle.style.background = 'linear-gradient(135deg, #10b981 0%, #3b82f6 100%)';
-            console.log('🟢 [DEBUG] Risk level: LOW (0-39)');
+        // Animate the SVG ring based on risk score
+        const scoreRingFill = document.getElementById('scoreRingFill');
+        if (scoreRingFill) {
+            const circumference = 2 * Math.PI * 54; // r=54
+            const offset = circumference - (riskScore / 100) * circumference;
+            scoreRingFill.style.strokeDashoffset = offset;
+
+            // Color code the ring based on threat level
+            if (riskScore >= 80) {
+                scoreRingFill.style.stroke = '#dc2626'; // Red
+                console.log('[DEBUG] Risk level: CRITICAL (80-100)');
+            } else if (riskScore >= 60) {
+                scoreRingFill.style.stroke = '#d97706'; // Amber
+                console.log('[DEBUG] Risk level: HIGH (60-79)');
+            } else if (riskScore >= 40) {
+                scoreRingFill.style.stroke = '#6b7280'; // Gray
+                console.log('[DEBUG] Risk level: MEDIUM (40-59)');
+            } else {
+                scoreRingFill.style.stroke = '#059669'; // Green
+                console.log('[DEBUG] Risk level: LOW (0-39)');
+            }
         }
 
         this.actionButtons.style.display = 'flex';
         this.scanTime.textContent = new Date().toLocaleTimeString();
 
-        console.log('✅ [DEBUG] Final verdict displayed with risk score:', riskScore);
+        console.log('[DEBUG] Final verdict displayed with risk score:', riskScore);
     }
     
     toggleLayerDetails(layerId) {
